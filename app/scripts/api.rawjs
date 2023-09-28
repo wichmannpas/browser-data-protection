@@ -1,0 +1,8 @@
+function addProtectedField() {
+  console.log('add field')
+  console.log('add field 42')
+}
+
+window.browserDataProtection = {
+  addProtectedField
+}
