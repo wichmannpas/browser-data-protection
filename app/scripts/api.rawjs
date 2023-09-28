@@ -1,6 +1,9 @@
-function addProtectedField() {
-  console.log('add field')
-  console.log('add field 42')
+function addProtectedField(options) {
+  window.postMessage({
+    context: 'bdp',
+    operation: 'addProtectedField',
+    options,
+  })
 }
 
 window.browserDataProtection = {

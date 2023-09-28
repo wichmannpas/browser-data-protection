@@ -13,3 +13,10 @@ function injectAPI() {
   (document.head || document.documentElement).prepend(script);
 }
 injectAPI()
+
+window.addEventListener('message', (event) => {
+  if (event.source !== window || event.data.context !== 'bdp') {
+    return
+  }
+  console.log(event.data)
+})
