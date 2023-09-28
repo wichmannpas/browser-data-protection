@@ -1,11 +1,20 @@
-function addProtectedField(options) {
-  window.postMessage({
-    context: 'bdp',
-    operation: 'addProtectedField',
-    options,
-  })
-}
+(function () {
+  function addProtectedField(element, options) {
+    const fieldId = window.crypto.getRandomValues(new Uint32Array(1))[0]
+    element.setAttribute('bdp-fieldId', fieldId)
+    element.classList.add('bdpfield')
+    element.classList.add(`bdpfield-${fieldId}`)
+    window.postMessage({
+      context: 'bdp',
+      operation: 'addProtectedField',
+      options,
+      fieldId
+    })
 
-window.browserDataProtection = {
-  addProtectedField
-}
+    // TODO: return a response object? Or rather provide access directly on the DOM object, then no return is necessary.
+  }
+
+  window.browserDataProtection = {
+    addProtectedField
+  }
+})();

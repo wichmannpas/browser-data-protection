@@ -1,0 +1,27 @@
+.bdpfield {
+  visibility: none;
+}
+
+.bdpfield:after {
+  display: inline-block;
+  height: 1.1em;
+  background: rgb(241, 240, 242);
+  border: solid 1px #001aff;
+  color: black;
+  border-radius: 3px;
+  width: 12em;
+  height: 2.5em;
+  padding: 0.2em;
+  text-align: center;
+  content: "Click to edit protected content";
+  font-style: italic;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.bdpfield.editActive:after {
+  background: rgb(138, 207, 78);
+  line-height: 2.3em;
+  content: "Edit in pop-up …";
+}

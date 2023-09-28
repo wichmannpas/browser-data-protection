@@ -39,6 +39,7 @@
     }
   ],
   "web_accessible_resources": [
-    "scripts/api.js"
+    "scripts/api.js",
+    "styles/site.css"
   ]
 }

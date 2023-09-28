@@ -13,4 +13,8 @@
   chrome.tabs.onActivated.addListener((activeInfo) => {
     console.log('onActivated', activeInfo)
   })
+
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log('onMessage', message, sender)
+  })
 })();

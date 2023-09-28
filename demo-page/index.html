@@ -6,9 +6,12 @@
   </head>
   <body>
     <h1>BrowserDataProtection Demo Page</h1>
-    <p></p>
+    <div id="field1"></div>
     <script type="text/javascript">
-      (function () {
+      (async function () {
+        const field1 = document.getElementById('field1')
+        const cryptoField = await window.browserDataProtection.addProtectedField(field1)
+        console.log(cryptoField)
       })();
     </script>
   </body>
