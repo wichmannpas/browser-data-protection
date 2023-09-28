@@ -1,0 +1,12 @@
+{
+  "name": "browser-data-protection",
+  "version": "0.0.1",
+  "description": "Proof-of-concept implementation of the BrowserDataProtection architecture as a web extension",
+  "scripts": {
+    "dev": "webextension-toolbox dev",
+    "build": "webextension-toolbox build"
+  },
+  "dependencies": {
+    "@webextension-toolbox/webextension-toolbox": "^6.1.0"
+  }
+}
