@@ -1,15 +1,18 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Demo Page for BrowserDataProtection</title>
-  </head>
-  <body>
-    <h1>BrowserDataProtection Demo Page</h1>
-    <div id="field1"></div>
 
-    <div id="field2"></div>
-    <script type="text/javascript">
+<head>
+  <meta charset="utf-8" />
+  <title>Demo Page for BrowserDataProtection</title>
+</head>
+
+<body>
+  <h1>BrowserDataProtection Demo Page</h1>
+  <div id="field1"></div>
+
+  <div id="field2"></div>
+  <script type="text/javascript">
+    window.setTimeout(() => {
       (async function () {
         const field1 = document.getElementById('field1')
         const cryptoField = await window.browserDataProtection.createProtectedField(field1, {
@@ -25,6 +28,8 @@
         })
         console.log(cryptoField2)
       })();
-    </script>
-  </body>
+    }, 500);
+  </script>
+</body>
+
 </html>

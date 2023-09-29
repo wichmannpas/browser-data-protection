@@ -1,6 +1,6 @@
 (function () {
   class ProtectedField {
-    constructor (fieldId, options) {
+    constructor(fieldId, options) {
       this.#fieldId = fieldId
       this.#options = Object.assign({}, options)
     }

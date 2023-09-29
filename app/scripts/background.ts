@@ -4,6 +4,9 @@ chrome.runtime.onInstalled.addListener((details) => {
   console.log('previousVersion', details.previousVersion)
 })
 
+
+// TODO: need to migrate this to Storage API as v3 manifest service worker does not run persistently
+
 interface TabState {
   activeFieldId: number | null
   fields: InternalProtectedField[]
@@ -44,17 +47,17 @@ function updateBadge(tabId: number) {
   const tabState = state.getStateForTab(tabId)
   const fieldCount = tabState.fields.length
   if (fieldCount === 0) {
-    chrome.browserAction.setBadgeText({
+    chrome.action.setBadgeText({
       text: null,
       tabId
     })
     return
   }
-  chrome.browserAction.setBadgeText({
+  chrome.action.setBadgeText({
     text: fieldCount.toString(),
     tabId
   })
-  chrome.browserAction.setBadgeBackgroundColor({
+  chrome.action.setBadgeBackgroundColor({
     color: '#000000',
     tabId
   })

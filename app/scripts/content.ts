@@ -1,7 +1,7 @@
 import InternalProtectedField from './InternalProtectedField'
 
 // @ts-expect-error TS2307: Cannot find module './api.rawjs' or its corresponding type declarations.
-import apiCodeString from './api.rawjs'
+// import apiCodeString from './api.rawjs'
 
 /**
  * Injects the API functions into the window object by injecting the api.js script.
@@ -11,7 +11,8 @@ import apiCodeString from './api.rawjs'
 function injectAPI() {
   const script = document.createElement('script')
   script.setAttribute('type', 'text/javascript')
-  script.text = apiCodeString;
+  // script.text = apiCodeString;
+  script.setAttribute('src', chrome.runtime.getURL('scripts/api.js'));
   (document.head || document.documentElement).prepend(script)
 }
 injectAPI()
