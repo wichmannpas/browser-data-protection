@@ -1,12 +1,6 @@
-const button = document.getElementById('testbutton')
-if (button !== null) {
-  button.innerText = 'testbutton'
-  button.addEventListener('click', () => {
-    console.log('testbutton clicked')
-  })
-}
+import { createApp } from 'vue'
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('POPUP onMessage', message, sender)
-  document.body.appendChild(document.createTextNode(JSON.stringify(message)))
-})
+import App from '../popup/App.vue'
+
+const app = createApp(App)
+app.mount('#popup')

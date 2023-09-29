@@ -10,6 +10,9 @@
     "@webextension-toolbox/webextension-toolbox": "^6.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "vue": "^3.3.4",
+    "vue-loader": "^17.2.2",
+    "vue-template-compiler": "^2.7.14"
   }
 }
