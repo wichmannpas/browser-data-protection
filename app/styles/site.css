@@ -3,7 +3,7 @@
 }
 
 .bdpfield:after {
-  display: inline-block;
+  display: block;
   height: 1.1em;
   background: rgb(241, 240, 242);
   border: solid 1px #001aff;

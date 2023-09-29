@@ -7,11 +7,23 @@
   <body>
     <h1>BrowserDataProtection Demo Page</h1>
     <div id="field1"></div>
+
+    <div id="field2"></div>
     <script type="text/javascript">
       (async function () {
         const field1 = document.getElementById('field1')
-        const cryptoField = await window.browserDataProtection.addProtectedField(field1)
+        const cryptoField = await window.browserDataProtection.createProtectedField(field1, {
+          protectionMode: 'user-only',
+          distributionMode: 'local'
+        })
         console.log(cryptoField)
+
+        const field2 = document.getElementById('field2')
+        const cryptoField2 = await window.browserDataProtection.createProtectedField(field2, {
+          protectionMode: 'user-only',
+          distributionMode: 'local'
+        })
+        console.log(cryptoField2)
       })();
     </script>
   </body>
