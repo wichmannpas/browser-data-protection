@@ -86,17 +86,33 @@ chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.Messa
     return
   }
   if (sender.tab === undefined || sender.tab.id === undefined) {
-    throw new Error('sender.tab is undefined for field creation')
-  }
-  switch (message.operation) {
-    case 'contentScriptReady':
-      state.clearTabState(sender.tab.id)
-      updateBadge(sender.tab.id)
-      break
-    case 'fieldCreated':
-      handleFieldCreated(message, sender)
-      break
-    default:
-      throw new Error(`Unknown operation: ${message.operation}`)
+    // message is from popup
+    switch (message.operation) {
+      case 'getTabState':
+        console.log(state.getStateForTab(activeTabId))
+        sendResponse(state.getStateForTab(activeTabId))
+        break
+      default:
+        throw new Error(`Unknown operation (from popup): ${message.operation}`)
+    }
+  } else {
+    // message is from the content script
+    switch (message.operation) {
+      case 'contentScriptReady':
+        state.clearTabState(sender.tab.id)
+        updateBadge(sender.tab.id)
+        break
+      case 'fieldCreated':
+        handleFieldCreated(message, sender)
+        break
+      case 'startEdit':
+        state.getStateForTab(sender.tab.id).activeFieldId = message.internalProtectedField.fieldId
+        break
+      case 'stopEdit':
+        state.getStateForTab(sender.tab.id).activeFieldId = null
+        break
+      default:
+        throw new Error(`Unknown operation: ${message.operation}`)
+    }
   }
 })

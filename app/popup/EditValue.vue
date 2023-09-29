@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { defineProps, ref } from 'vue'
+import InternalProtectedField from '../scripts/InternalProtectedField'
 
-let foo: number = 12
+const props = defineProps({
+  field: InternalProtectedField
+})
+
 const plaintextValue = ref('')
 
 </script>
@@ -9,6 +13,8 @@ const plaintextValue = ref('')
 <template>
   <div>
     edit
+
+    {{ props.field }}
 
     <input type="text" v-model="plaintextValue">
     {{ plaintextValue }}
