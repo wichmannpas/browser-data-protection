@@ -1,3 +1,7 @@
+/**
+ * Content script injected into the ISOLATED world to handle communication between the API and the extension.
+ */
+
 import InternalProtectedField from './InternalProtectedField'
 
 function createProtectedField(fieldId: number, options: object) {
@@ -9,7 +13,7 @@ function createProtectedField(fieldId: number, options: object) {
   internalProtectedField.addClickListener()
 }
 
-// Listen to message from the web application (api)
+// Listen to message from the web application (api.ts, MAIN world content script)
 window.addEventListener('message', (event) => {
   if (event.source !== window || event.data.context !== 'bdp') {
     return
@@ -19,6 +23,7 @@ window.addEventListener('message', (event) => {
       createProtectedField(event.data.fieldId, event.data.options)
       break
     case 'clearAllActiveFields':
+      // clear (selection of) all active fields
       InternalProtectedField.clearAllActiveFields()
       break
     default:

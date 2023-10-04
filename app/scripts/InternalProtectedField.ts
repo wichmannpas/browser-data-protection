@@ -30,6 +30,9 @@ export default class InternalProtectedField {
     })
   }
 
+  /**
+   * Clear (selection of) all active fields.
+   */
   static clearAllActiveFields() {
     const allFields = document.getElementsByClassName('bdpfield')
     for (let i = 0; i < allFields.length; i++) {

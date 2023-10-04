@@ -1,4 +1,8 @@
+/**
+ * Content script injected into the MAIN world (i.e., the web application).
+ */
 (function () {
+
   class ProtectedField {
     constructor(fieldId: number, options: any) {
       this.#fieldId = fieldId

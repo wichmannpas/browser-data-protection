@@ -10,7 +10,7 @@
     "128": "images/icon-128.png"
   },
   "background": {
-    "service_worker": "scripts/background.js",
+    "service_worker": "scripts/service_worker.js",
     "type": "module"
   },
   "action": {
@@ -60,5 +60,8 @@
         "*://*/*"
       ]
     }
+  ],
+  "permissions": [
+    "storage"
   ]
 }
