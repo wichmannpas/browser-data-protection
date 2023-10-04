@@ -21,7 +21,6 @@ export class State {
 
   addFieldToTab(tabId: number, field: InternalProtectedField) {
     if (this.state[tabId] === undefined) {
-      console.log('empty tab state?')
       this.state[tabId] = this.#emptyTabState()
     }
     this.state[tabId].fields.push(field)

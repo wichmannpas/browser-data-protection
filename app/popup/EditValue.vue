@@ -8,15 +8,30 @@ const props = defineProps({
 
 const plaintextValue = ref('')
 
+async function finishEditing() {
+  // TODO: handle value
+
+  await chrome.runtime.sendMessage({
+    context: 'bdp',
+    operation: 'stopEdit'
+  })
+  window.close()
+}
+
 </script>
 
 <template>
   <div>
-    edit
+    <form @submit.prevent="finishEditing">
+      {{ props.field }}
 
-    {{ props.field }}
+      <input type="text" v-model="plaintextValue">
 
-    <input type="text" v-model="plaintextValue">
-    {{ plaintextValue }}
+      <button type="submit" class="btn btn-block btn-success">
+        Finish editing
+      </button>
+
+      {{ plaintextValue }}
+    </form>
   </div>
 </template>
