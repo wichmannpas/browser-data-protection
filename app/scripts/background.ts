@@ -1,11 +1,10 @@
-import InternalProtectedField from "./InternalProtectedField"
+import InternalProtectedField from "../scripts/InternalProtectedField"
 
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('previousVersion', details.previousVersion)
 })
 
-
-// TODO: need to migrate this to Storage API as v3 manifest service worker does not run persistently
+// TODO: need to migrate this to Storage API as v3 manifest service worker does not run persistently (or do not require state persistence at all/persist in content script only)
 
 interface TabState {
   activeFieldId: number | null
@@ -48,7 +47,7 @@ function updateBadge(tabId: number) {
   const fieldCount = tabState.fields.length
   if (fieldCount === 0) {
     chrome.action.setBadgeText({
-      text: null,
+      text: '',
       tabId
     })
     return
@@ -71,6 +70,8 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
     chrome.tabs.sendMessage(activeTabId, {
       context: 'bdp',
       operation: 'clearAllActiveFields'
+    }).catch((error) => {
+      console.warn(`Error clearing active fields for tab ${activeTabId}: ${error}`)
     })
   }
   activeTabId = activeInfo.tabId

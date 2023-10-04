@@ -1,9 +1,9 @@
 {
+  "manifest_version": 3,
   "name": "__MSG_appName__",
   "short_name": "__MSG_appShortName__",
   "description": "__MSG_appDescription__",
   "version": "0.0.1",
-  "manifest_version": 3,
   "default_locale": "en",
   "icons": {
     "16": "images/icon-16.png",
@@ -35,6 +35,19 @@
       ],
       "run_at": "document_start",
       "all_frames": true
+    },
+    {
+      "matches": [
+        "*://*/*"
+      ],
+      "js": [
+        "scripts/api.js"
+      ],
+      "css": [
+        "styles/site.css"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ],
   "web_accessible_resources": [

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, Ref, onBeforeMount } from 'vue'
 import EditValue from '../../dist/chrome/popup/EditValue.vue';
+import InternalProtectedField from '../scripts/InternalProtectedField';
 
 const tabState = reactive({
   activeFieldId: null as null | number,
@@ -13,7 +14,7 @@ const activeField = computed(() => {
     return null
   }
 
-  return tabState.fields.find(field.fieldId === tabState.activeFieldId)
+  return tabState.fields.find(field => field.fieldId === tabState.activeFieldId)
 })
 
 onBeforeMount(() => {

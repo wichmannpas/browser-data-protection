@@ -1,32 +1,5 @@
 import InternalProtectedField from './InternalProtectedField'
 
-// @ts-expect-error TS2307: Cannot find module './api.rawjs' or its corresponding type declarations.
-// import apiCodeString from './api.rawjs'
-
-/**
- * Injects the API functions into the window object by injecting the api.js script.
- * The script is added as an inline script to make sure it is injected before any other script on the page.
- * The content script is loaded at document start.
- */
-function injectAPI() {
-  const script = document.createElement('script')
-  script.setAttribute('type', 'text/javascript')
-  // script.text = apiCodeString;
-  script.setAttribute('src', chrome.runtime.getURL('scripts/api.js'));
-  (document.head || document.documentElement).prepend(script)
-}
-injectAPI()
-function injectCSS() {
-  const style = document.createElement('link')
-  style.setAttribute('type', 'text/css')
-  style.setAttribute('rel', 'stylesheet')
-  style.setAttribute('href', chrome.runtime.getURL('styles/site.css'))
-  document.head.append(style)
-}
-document.addEventListener('DOMContentLoaded', () => {
-  injectCSS()
-})
-
 function createProtectedField(fieldId: number, options: object) {
   const element = document.getElementsByClassName(`bdpfield-${fieldId}`)[0]
   if (element === undefined) {
