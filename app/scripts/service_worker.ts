@@ -30,42 +30,58 @@ async function updateBadge(tabId: number) {
       text: '',
       tabId
     })
-    return
+  } else {
+    chrome.action.setBadgeText({
+      text: fieldCount.toString(),
+      tabId
+    })
   }
-  chrome.action.setBadgeText({
-    text: fieldCount.toString(),
-    tabId
-  })
-  chrome.action.setBadgeBackgroundColor({
-    color: '#000000',
-    tabId
-  })
+  console.log(tabState.activeFieldId)
+  if (tabState.activeFieldId === null) {
+    chrome.action.setBadgeBackgroundColor({
+      color: '#0000ff',
+      tabId
+    })
+  } else {
+    chrome.action.setBadgeBackgroundColor({
+      color: '#20a000',
+      tabId
+    })
+  }
 }
 
 const stateProm = getState()
 
 async function sendClearAllActiveFields(tabId: number) {
+  chrome.tabs.sendMessage(tabId, {
+    context: 'bdp',
+    operation: 'clearAllActiveFields'
+  }).catch((error) => {
+    console.warn(`Error clearing active fields for tab ${tabId}: ${error}`)
+  })
+}
+
+chrome.tabs.onActivated.addListener(async activeInfo => {
   let state = await stateProm
   if (state.activeTabId !== -1) {
     // clear any active field for the previous tab
-    const oldTabState = state.getStateForTab(state.activeTabId)
-    oldTabState.activeFieldId = null
-    chrome.tabs.sendMessage(state.activeTabId, {
-      context: 'bdp',
-      operation: 'clearAllActiveFields'
-    }).catch((error) => {
-      console.warn(`Error clearing active fields for tab ${state.activeTabId}: ${error}`)
-    })
+    sendClearAllActiveFields(state.activeTabId)
   }
-  state.activeTabId = tabId
+  state.getStateForTab(state.activeTabId).activeFieldId = null
+  state.activeTabId = activeInfo.tabId
   await setState(state)
-}
-
-chrome.tabs.onActivated.addListener(activeInfo => sendClearAllActiveFields(activeInfo.tabId))
+})
 
 async function handleFieldCreated(message: any, tabId: number) {
   let state = await stateProm
   state.addFieldToTab(tabId, message.internalProtectedField)
+  await setState(state)
+  updateBadge(tabId)
+}
+
+async function handleStopEdit(tabId: number) {
+  let state = await stateProm
+  state.getStateForTab(tabId).activeFieldId = null
   await setState(state)
   updateBadge(tabId)
 }
@@ -84,6 +100,7 @@ chrome.runtime.onMessage.addListener(function (message: any, sender: chrome.runt
           break
         case 'stopEdit':
           sendClearAllActiveFields(state.activeTabId)
+          handleStopEdit(state.activeTabId)
           sendResponse()
           break
         default:
@@ -102,11 +119,11 @@ chrome.runtime.onMessage.addListener(function (message: any, sender: chrome.runt
           break
         case 'startEdit':
           state.getStateForTab(sender.tab.id).activeFieldId = message.internalProtectedField.fieldId
+          updateBadge(sender.tab.id)
           await setState(state)
           break
         case 'stopEdit':
-          state.getStateForTab(sender.tab.id).activeFieldId = null
-          await setState(state)
+          handleStopEdit(sender.tab.id)
           break
         default:
           throw new Error(`Unknown operation: ${message.operation}`)
