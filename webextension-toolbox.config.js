@@ -7,6 +7,12 @@ module.exports = {
       type: 'asset/source',
     })
 
+    // CSS
+    config['module']['rules'].push({
+      test: /\.css$/i,
+      use: ['style-loader', 'css-loader'],
+    })
+
     // Vue.js
     for (let i = 0; i < config['module']['rules'].length; i++) {
       if (config['module']['rules'][i]['test'].toString().indexOf('.tsx') >= 0) {

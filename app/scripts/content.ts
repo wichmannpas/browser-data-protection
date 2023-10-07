@@ -34,7 +34,7 @@ window.addEventListener('message', (event) => {
 // Notify background script that the content script is ready (i.e., the page was just (re)loaded)
 chrome.runtime.sendMessage({
   context: 'bdp',
-  operation: 'contentScriptReady'
+  operation: 'contentScriptReady',
 })
 
 // Listen for messages from the background script
@@ -49,4 +49,22 @@ chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.Messa
     default:
       throw new Error(`Unknown operation: ${message.operation}`)
   }
+})
+
+// debug: add link to popup in new tab
+addEventListener('DOMContentLoaded', () => {
+  const button = document.createElement('button')
+  button.innerText = 'DEBUG: Open popup in new tab'
+  button.addEventListener('click', () => {
+    chrome.runtime.sendMessage({
+      context: 'bdp',
+      operation: 'openPopupInNewTab',
+    })
+  })
+  document.body.appendChild(button)
+  // DEBUG: open tab immediately
+  chrome.runtime.sendMessage({
+    context: 'bdp',
+    operation: 'openPopupInNewTab',
+  })
 })

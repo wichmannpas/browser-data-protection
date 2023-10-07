@@ -5,6 +5,7 @@
   const VALID_OPTIONS = {
     protectionMode: [
       'user-only',
+      'password',
       'symmetric',
       'recipient',
     ],
@@ -15,7 +16,11 @@
         protectionModes: ['user-only'],
       },
       {
-        mode: 'direct',
+        mode: 'direct-plain',
+        protectionModes: ['recipient'],
+      },
+      {
+        mode: 'direct-wrapped',
         protectionModes: ['recipient'],
       },
       {
@@ -48,15 +53,21 @@
         throw new Error(`ProtectedField invalid protectionMode '${this.#options.protectionMode}'`)
       }
 
-      if (this.#options.distributionMode === undefined) {
-        throw new Error(`ProtectedField missing required option 'distributionMode'`)
-      }
-      const validCombinations = VALID_OPTIONS.distributionMode.find((x: any) => x.mode === this.#options.distributionMode)
-      if (validCombinations === undefined) {
-        throw new Error(`ProtectedField invalid distributionMode '${this.#options.distributionMode}'`)
-      }
-      if (!validCombinations.protectionModes.includes(this.#options.protectionMode)) {
-        throw new Error(`ProtectedField invalid combination of protectionMode '${this.#options.protectionMode}' and distributionMode '${this.#options.distributionMode}'`)
+      if (this.#options.protectionMode === 'password') {
+        if (this.#options.distributionMode !== undefined) {
+          throw new Error(`ProtectedField protectionMode '${this.#options.protectionMode}' does not allow a distribution mode`)
+        }
+      } else {
+        if (this.#options.distributionMode === undefined) {
+          throw new Error(`ProtectedField missing required option 'distributionMode'`)
+        }
+        const validCombinations = VALID_OPTIONS.distributionMode.find((x: any) => x.mode === this.#options.distributionMode)
+        if (validCombinations === undefined) {
+          throw new Error(`ProtectedField invalid distributionMode '${this.#options.distributionMode}'`)
+        }
+        if (!validCombinations.protectionModes.includes(this.#options.protectionMode)) {
+          throw new Error(`ProtectedField invalid combination of protectionMode '${this.#options.protectionMode}' and distributionMode '${this.#options.distributionMode}'`)
+        }
       }
     }
   }

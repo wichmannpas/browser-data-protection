@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { defineProps, ref } from 'vue'
-import InternalProtectedField from '../scripts/InternalProtectedField'
+import { PropType, computed, onBeforeMount, reactive, ref } from 'vue'
+import InternalProtectedField from '../../scripts/InternalProtectedField'
 
 const props = defineProps({
-  field: InternalProtectedField
+  field: {
+    type: InternalProtectedField,
+    required: true
+  }
 })
-
-const plaintextValue = ref('')
-
 async function finishEditing() {
   // TODO: handle value
 
@@ -18,6 +18,7 @@ async function finishEditing() {
   window.close()
 }
 
+const plaintextValue = ref('')
 </script>
 
 <template>
@@ -25,7 +26,7 @@ async function finishEditing() {
     <form @submit.prevent="finishEditing">
       {{ props.field }}
 
-      <input type="text" v-model="plaintextValue">
+      <input type="text" v-model="plaintextValue" />
 
       <button type="submit" class="btn btn-block btn-success">
         Finish editing

@@ -92,8 +92,8 @@ chrome.runtime.onMessage.addListener(function (message: any, sender: chrome.runt
     if (message.context !== 'bdp') {
       return
     }
-    if (sender.tab === undefined || sender.tab.id === undefined) {
-      // message is from popup
+    if (sender.tab === undefined || sender.tab.id === undefined || sender.origin?.startsWith('chrome-extension://')) {
+      // message is from popup/internal page
       switch (message.operation) {
         case 'getTabState':
           sendResponse(state.getStateForTab(state.activeTabId))
@@ -124,6 +124,11 @@ chrome.runtime.onMessage.addListener(function (message: any, sender: chrome.runt
           break
         case 'stopEdit':
           handleStopEdit(sender.tab.id)
+          break
+        case 'openPopupInNewTab':
+          chrome.tabs.create({
+            url: chrome.runtime.getURL('popup/popup.html')
+          })
           break
         default:
           throw new Error(`Unknown operation: ${message.operation}`)

@@ -12,6 +12,8 @@
 
   <div id="field2"></div>
 
+  <div id="field3"></div>
+
   <p>
     <a href="empty.html">Page without fields</a>
   </p>
@@ -20,14 +22,20 @@
       const field1 = document.getElementById('field1')
       const cryptoField = await window.browserDataProtection.createProtectedField(field1, {
         protectionMode: 'user-only',
-        distributionMode: 'local'
+        distributionMode: 'local',
       })
       console.log(cryptoField)
 
       const field2 = document.getElementById('field2')
       const cryptoField2 = await window.browserDataProtection.createProtectedField(field2, {
         protectionMode: 'user-only',
-        distributionMode: 'local'
+        distributionMode: 'local',
+      })
+      console.log(cryptoField2)
+
+      const field3 = document.getElementById('field3')
+      const cryptoField3 = await window.browserDataProtection.createProtectedField(field3, {
+        protectionMode: 'password',
       })
       console.log(cryptoField2)
     })();
