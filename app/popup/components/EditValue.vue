@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PropType, computed, onBeforeMount, reactive, ref } from 'vue'
+import { ref } from 'vue'
 import InternalProtectedField from '../../scripts/InternalProtectedField'
 
 const props = defineProps({

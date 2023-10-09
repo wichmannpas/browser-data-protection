@@ -36,7 +36,6 @@ async function updateBadge(tabId: number) {
       tabId
     })
   }
-  console.log(tabState.activeFieldId)
   if (tabState.activeFieldId === null) {
     chrome.action.setBadgeBackgroundColor({
       color: '#0000ff',

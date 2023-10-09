@@ -63,6 +63,7 @@ addEventListener('DOMContentLoaded', () => {
   })
   document.body.appendChild(button)
   // DEBUG: open tab immediately
+  return
   chrome.runtime.sendMessage({
     context: 'bdp',
     operation: 'openPopupInNewTab',
