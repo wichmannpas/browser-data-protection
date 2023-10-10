@@ -59,6 +59,12 @@ async function sendClearAllActiveFields(tabId: number) {
     console.warn(`Error clearing active fields for tab ${tabId}: ${error}`)
   })
 }
+function closePopup() {
+  chrome.runtime.sendMessage({
+    context: 'bdp',
+    operation: 'closePopup',
+  })
+}
 
 chrome.tabs.onActivated.addListener(async activeInfo => {
   let state = await stateProm
@@ -123,6 +129,9 @@ chrome.runtime.onMessage.addListener(function (message: any, sender: chrome.runt
           break
         case 'stopEdit':
           handleStopEdit(sender.tab.id)
+          break
+        case 'closePopup':
+          closePopup()
           break
         case 'openPopupInNewTab':
           chrome.tabs.create({

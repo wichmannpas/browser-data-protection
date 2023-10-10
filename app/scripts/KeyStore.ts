@@ -1,5 +1,13 @@
 import { reactive, toRaw } from 'vue'
-import { bufferFromBase64, bufferToBase64, bufferToHex } from './utils'
+import { bufferToHex } from './utils'
+
+export const keyTypes = [
+  // [keyType, keyText, keyTextAdjective (used with the word "key" appended), keyDescription]
+  ['user-only', 'User only', 'user-only', 'A key not shared with any other user. Can be transferred to your other devices/browsers.'],
+  ['password', 'Saved Passwords', 'saved password', 'A password that is used for the decryption of a specific value or set of values. It can optionally be saved here so it does not need to be entered every time. Every password is bound to a specific input field.'],
+  ['symmetric', 'Symmetric', 'symmetric', 'A key that is shared with a specific set of other users.'],
+  ['recipient', 'Recipient', 'recipient', 'A key that is shared/received with a specific user. Only the key owner (who knows the so-called private key) can decrypt values encrypted with this key. Other users can only encrypt values for this key.'],
+]
 
 export interface StoredKey {
   keyId: string
@@ -23,6 +31,8 @@ export function isRecipientKey(key: StoredKey): key is RecipientKey {
 }
 
 export default class KeyStore {
+  static #keyStore: KeyStore | null = null
+
   #userOnlyKeys: object
   #savedPasswords: object
   #symmetricKeys: object
@@ -35,11 +45,18 @@ export default class KeyStore {
     this.#recipientKeys = reactive(Object.create(null))
   }
 
+  static getKeyStore(): KeyStore {
+    return KeyStore.#keyStore ?? (KeyStore.#keyStore = new KeyStore())
+  }
+
   /**
    * Get the user only keys sorted descending by their creation date.
    */
   getUserOnlyKeys() {
     return Object.values(this.#userOnlyKeys).sort((a, b) => a.created.valueOf() - b.created.valueOf())
+  }
+  getUserOnlyKeysForOrigin(origin: string) {
+    return this.getUserOnlyKeys().filter(key => key.allowedOrigins.includes(origin) || key.allowedOrigins.includes('*'))
   }
   getUserOnlyKeyCount(): number {
     return Object.keys(this.#userOnlyKeys).length
@@ -178,7 +195,7 @@ export default class KeyStore {
     return result
   }
 
-  async #deserializeKey(value: { keyData: JsonWebKey, algorithm: AlgorithmIdentifier}): Promise<CryptoKey> {
+  async #deserializeKey(value: { keyData: JsonWebKey, algorithm: AlgorithmIdentifier }): Promise<CryptoKey> {
     return await crypto.subtle.importKey('jwk', value.keyData, value.algorithm, true, ['encrypt', 'decrypt'])
   }
   async #deserializeValues(value: object): Promise<object> {

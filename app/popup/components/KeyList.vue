@@ -118,7 +118,7 @@ function deleteKey(key: StoredKey | RecipientKey) {
             </tr>
             <tr>
               <td colspan="5">
-                <button class="btn btn-error" @click="deleteKey(key)">
+                <button class="btn btn-sm btn-error" @click="deleteKey(key)">
                   <i class="fa-solid fa-trash"></i>
                   Permanently delete this key
                 </button>
@@ -135,16 +135,6 @@ function deleteKey(key: StoredKey | RecipientKey) {
 .key-list {
   overflow-y: auto;
   max-height: 20em;
-}
-
-.key-id {
-  font-family: monospace;
-}
-
-td.key-id {
-  max-width: 8em;
-  word-wrap: break-word;
-  font-size: 0.7em;
 }
 
 .key-detail-head {

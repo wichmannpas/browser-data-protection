@@ -14,7 +14,11 @@ const activeField = computed(() => {
     return null
   }
 
-  return tabState.fields.find(field => field.fieldId === tabState.activeFieldId)
+  const field = tabState.fields.find(field => field.fieldId === tabState.activeFieldId)
+  if (field === undefined) {
+    throw new Error(`field with id ${tabState.activeFieldId} not found`)
+  }
+  return field as InternalProtectedField
 })
 
 onBeforeMount(() => {
@@ -30,9 +34,7 @@ onBeforeMount(() => {
 <template>
   <div v-if="ready">
     <h5>Edit Field Value</h5>
-    <template v-if="tabState.activeFieldId !== null">
-      <EditValue :field="activeField" />
-    </template>
+    <EditValue v-if="activeField" :field="activeField" />
     <div v-else-if="tabState.fields.length > 0">
       <p>
         No field is currently selected.

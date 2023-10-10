@@ -1,10 +1,14 @@
+import { ProtectedFieldOptions } from "./ProtectedFieldOptions"
+
 export default class InternalProtectedField {
   fieldId: number
+  origin: string
   element: HTMLElement
-  options: object
+  options: ProtectedFieldOptions
 
-  constructor(fieldId: number, element: HTMLElement, options: object) {
+  constructor(fieldId: number, origin: string, element: HTMLElement, options: ProtectedFieldOptions) {
     this.fieldId = fieldId
+    this.origin = origin
     this.element = element
     this.options = options
 
@@ -15,6 +19,9 @@ export default class InternalProtectedField {
 
   addClickListener() {
     this.element.addEventListener('click', event => {
+      this.sendMessage({
+        operation: 'closePopup'
+      })
       if (this.element.classList.contains('editActive')) {
         this.element.classList.remove('editActive')
         this.sendMessage({

@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { Ref, ref } from 'vue';
-import EditValueView from './views/EditValueView.vue';
-import ManageKeysView from './views/ManageKeysView.vue';
+import EditValueView from './views/EditValueView.vue'
+import ManageKeysView from './views/ManageKeysView.vue'
+import { activeView } from '../scripts/popupAppState'
 
-const activeView: Ref<string> = ref('edit-value')
 
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (message.context !== 'bdp') {
+    return
+  }
+  switch (message.operation) {
+    case 'closePopup':
+      window.close()
+      break
+  }
+})
 </script>
 
 <style scoped>

@@ -1,3 +1,5 @@
+import { ProtectedFieldOptions } from "./ProtectedFieldOptions";
+
 /**
  * Content script injected into the MAIN world (i.e., the web application) at document_start.
  */
@@ -35,14 +37,18 @@
   }
 
   class ProtectedField {
-    #fieldId = -1
-    #options: any = {}
+    #fieldId: number
+    #options: ProtectedFieldOptions
 
     constructor(fieldId: number, options: any) {
       this.#fieldId = fieldId
-      this.#options = Object.assign({}, options)
+      this.#options = Object.assign(Object.create(null), options)
 
       this.#validateOptions()
+    }
+
+    get options(): ProtectedFieldOptions {
+      return Object.assign(Object.create(null), this.#options)
     }
 
     #validateOptions() {
@@ -69,6 +75,20 @@
           throw new Error(`ProtectedField invalid combination of protectionMode '${this.#options.protectionMode}' and distributionMode '${this.#options.distributionMode}'`)
         }
       }
+
+      if (this.#options.readOnly === undefined) {
+        this.#options.readOnly = false
+      }
+      if (typeof this.#options.readOnly !== 'boolean') {
+        throw new Error(`ProtectedField invalid readOnly '${this.#options.readOnly}'`)
+      }
+
+      if (this.#options.updateMode === undefined) {
+        this.#options.updateMode = 'immediate'
+      }
+      if (this.#options.updateMode !== 'immediate' && this.#options.updateMode !== 'on-submit') {
+        throw new Error(`ProtectedField invalid updateMode '${this.#options.updateMode}'`)
+      }
     }
   }
 
@@ -88,7 +108,7 @@
     window.postMessage({
       context: 'bdp',
       operation: 'createProtectedField',
-      options,
+      options: protectedField.options,
       fieldId
     })
 

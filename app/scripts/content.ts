@@ -3,13 +3,14 @@
  */
 
 import InternalProtectedField from './InternalProtectedField'
+import { ProtectedFieldOptions } from './ProtectedFieldOptions'
 
-function createProtectedField(fieldId: number, options: object) {
+function createProtectedField(fieldId: number, options: ProtectedFieldOptions) {
   const element = document.getElementsByClassName(`bdpfield-${fieldId}`)[0]
   if (element === undefined) {
     throw new Error(`Field with bdp id ${fieldId} not found`)
   }
-  const internalProtectedField = new InternalProtectedField(fieldId, element as HTMLElement, options)
+  const internalProtectedField = new InternalProtectedField(fieldId, location.origin, element as HTMLElement, options)
   internalProtectedField.addClickListener()
 }
 

@@ -1,17 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeMount, reactive, ref, watch } from 'vue'
-import KeyStore from '../../scripts/KeyStore';
+import KeyStore, { keyTypes } from '../../scripts/KeyStore';
 import KeyList from '../components/KeyList.vue';
+import { createKeyFor } from '../../scripts/popupAppState';
 
 const ready = ref(false)
 
-const keyTypes = [
-  // [keyType, keyText, keyTextAdjective (used with the word "key" appended), keyDescription]
-  ['user-only', 'User only', 'user-only', 'A key not shared with any other user. Can be transferred to your other devices/browsers.'],
-  ['password', 'Saved Passwords', 'saved password', 'A password that is used for the decryption of a specific value or set of values.'],
-  ['symmetric', 'Symmetric', 'symmetric', 'A key that is shared with a specific set of other users.'],
-  ['recipient', 'Recipient', 'recipient', 'A key that is shared/received with a specific user. Only the key owner (who knows the so-called private key) can decrypt values encrypted with this key. Other users can only encrypt values for this key.'],
-]
 const activeKeyType = ref('user-only')
 const activeKeyTypeData = computed(() => {
   const keyTypeData = keyTypes.find(keyType => keyType[0] === activeKeyType.value)
@@ -22,7 +16,7 @@ const activeKeyTypeData = computed(() => {
 })
 
 // key store values are reactive
-const keyStore = new KeyStore()
+const keyStore = KeyStore.getKeyStore()
 
 const keyCount = computed(() => {
   return {
@@ -58,11 +52,16 @@ function generateNewKey(keyType: string) {
   }
 }
 
-
 onBeforeMount(() => {
   keyStore.load().then(() => {
     ready.value = true
   })
+
+  if (createKeyFor.value !== null) {
+    activeKeyType.value = createKeyFor.value
+    createKeyFor.value = null
+    generateNewKeyActive.value = true
+  }
 })
 </script>
 
@@ -99,6 +98,9 @@ onBeforeMount(() => {
         </button>
         <div v-if="generateNewKeyActive">
           <form @submit.prevent="generateNewKey(activeKeyType)">
+            <h5>
+              Generate a new {{ activeKeyTypeData[2] }} key
+            </h5>
             <label class="form-label">
               Key description
               <input type="text" class="form-input" placeholder="A short description to help you recognize this key."
@@ -121,7 +123,8 @@ onBeforeMount(() => {
           <hr />
         </div>
 
-        <KeyList v-if="activeKeyType === 'user-only'" :keys="keyStore.getUserOnlyKeys()" :key-store="keyStore" :key-type="activeKeyType" />
+        <KeyList v-if="activeKeyType === 'user-only'" :keys="keyStore.getUserOnlyKeys()" :key-store="keyStore"
+          :key-type="activeKeyType" />
       </div>
     </div>
   </div>

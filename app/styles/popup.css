@@ -1,0 +1,9 @@
+.key-id {
+  font-family: monospace;
+}
+
+td.key-id {
+  max-width: 8em;
+  word-wrap: break-word;
+  font-size: 0.7em;
+}
