@@ -1,4 +1,4 @@
-import { StoredKey } from "./KeyStore"
+import KeyStore, { StoredKey, UserOnlyKey } from "./KeyStore"
 import { ProtectedFieldOptions } from "./ProtectedFieldOptions"
 
 /**
@@ -11,6 +11,7 @@ export default class InternalProtectedField {
   element: HTMLElement
   options: ProtectedFieldOptions
   ciphertextValue: null | string
+  fieldTabId: number | null = null
 
   constructor(fieldId: number, origin: string, element: HTMLElement, options: ProtectedFieldOptions, ciphertextValue: null | string = null) {
     this.fieldId = fieldId
@@ -18,7 +19,9 @@ export default class InternalProtectedField {
     this.element = element
     this.options = options
     this.ciphertextValue = ciphertextValue
+  }
 
+  sendFieldCreated() {
     this.sendMessage({
       operation: 'fieldCreated',
     })
@@ -47,15 +50,58 @@ export default class InternalProtectedField {
   /**
    * Encrypt a plaintext using the options of this field and the provided key.
    * Updates the ciphertextValue on this field. Does not store the plaintext.
+   * Propagates the change to the content script.
+   * Called from the browser action popup.
    */
-  encryptNewValue(plaintext: string, key: StoredKey) {
+  async encryptNewValue(plaintext: string, key: StoredKey, keyStore: KeyStore) {
     switch (this.options.protectionMode) {
       case 'user-only':
+        this.ciphertextValue = await keyStore.encryptWithUserOnlyKey(plaintext, key as UserOnlyKey, this.origin)
         break
       default:
         throw new Error(`Invalid protectionMode '${this.options.protectionMode}'`)
-        break
     }
+
+    // Send message to the API script.
+    if (this.fieldTabId === null) {
+      throw new Error(`InternalProtectedField ${this.fieldId} has no tabId`)
+    }
+    await chrome.scripting.executeScript({
+      func: (fieldId: number, ciphertextValue: string) => {
+        // @ts-expect-error
+        window._bdp_internal_message({
+          operation: 'updateCiphertext',
+          fieldId,
+          ciphertextValue,
+        })
+      },
+      args: [this.fieldId, this.ciphertextValue],
+      target: {
+        tabId: this.fieldTabId,
+      },
+      world: 'MAIN'
+    })
+
+    // Send message to service worker (tab state)
+    chrome.runtime.sendMessage({
+      context: 'bdp',
+      operation: 'updateCiphertext',
+      tabId: this.fieldTabId,
+      fieldId: this.fieldId,
+      ciphertextValue: this.ciphertextValue,
+    })
+  }
+
+  /**
+   * Set a ciphertext value for this field.
+   * Called from the content script upon receiving a request from the web application.
+   */
+  async setCiphertextValue(ciphertextValue: string) {
+    this.ciphertextValue = ciphertextValue
+    this.sendMessage({
+      operation: 'setFieldCiphertext',
+      ciphertextValue,
+    })
   }
 
   /**

@@ -79,6 +79,7 @@ chrome.tabs.onActivated.addListener(async activeInfo => {
 
 async function handleFieldCreated(message: any, tabId: number) {
   let state = await stateProm
+  message.internalProtectedField.fieldTabId = tabId
   state.addFieldToTab(tabId, message.internalProtectedField)
   await setState(state)
   updateBadge(tabId)
@@ -103,6 +104,10 @@ chrome.runtime.onMessage.addListener(function (message: any, sender: chrome.runt
         case 'getTabState':
           sendResponse(state.getStateForTab(state.activeTabId))
           break
+        case 'updateCiphertext':
+          state.updateFieldCiphertext(message.tabId, message.fieldId, message.ciphertextValue)
+          await setState(state)
+          break
         case 'stopEdit':
           sendClearAllActiveFields(state.activeTabId)
           handleStopEdit(state.activeTabId)
@@ -119,9 +124,22 @@ chrome.runtime.onMessage.addListener(function (message: any, sender: chrome.runt
           await setState(state)
           updateBadge(sender.tab.id)
           break
+
         case 'fieldCreated':
           await handleFieldCreated(message, sender.tab.id)
           break
+        case 'setFieldCiphertext':
+          state.updateFieldCiphertext(sender.tab.id, message.internalProtectedField.fieldId, message.ciphertextValue)
+          await setState(state)
+          // propagate change to browser action popup
+          chrome.runtime.sendMessage({
+            context: 'bdp',
+            operation: 'updateCiphertext',
+            fieldId: message.fieldId,
+            ciphertextValue: message.ciphertextValue,
+          })
+          break
+
         case 'startEdit':
           state.getStateForTab(sender.tab.id).activeFieldId = message.internalProtectedField.fieldId
           updateBadge(sender.tab.id)
@@ -130,16 +148,18 @@ chrome.runtime.onMessage.addListener(function (message: any, sender: chrome.runt
         case 'stopEdit':
           handleStopEdit(sender.tab.id)
           break
+
         case 'closePopup':
           closePopup()
           break
         case 'openPopupInNewTab':
+          // This is mainly for debugging purposes, but may also be used to provide the key manager in a separate tab.
           chrome.tabs.create({
             url: chrome.runtime.getURL('popup/popup.html')
           })
           break
         default:
-          throw new Error(`Unknown operation: ${message.operation}`)
+          throw new Error(`Unknown operation (from content): ${message.operation}`)
       }
     }
   })()

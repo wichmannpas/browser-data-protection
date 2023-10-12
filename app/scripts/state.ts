@@ -26,6 +26,17 @@ export class State {
     this.state[tabId].fields.push(field)
   }
 
+  /**
+   * Apply an update to the ciphertext of a field. Propagation of the value is not handled here.
+   */
+  updateFieldCiphertext(tabId: number, fieldId: number, ciphertextValue: string) {
+    const field = this.state[tabId].fields.find(field => field.fieldId === fieldId)
+    if (field === undefined) {
+      throw new Error(`Field ${fieldId} not found`)
+    }
+    field.ciphertextValue = ciphertextValue
+  }
+
   #emptyTabState() {
     return {
       activeFieldId: null,

@@ -23,7 +23,12 @@ const activeField = computed(() => {
 
 onBeforeMount(() => {
   chrome.runtime.sendMessage({ context: 'bdp', operation: 'getTabState' }, response => {
-    console.log('response', response)
+    response.fields = response.fields.map((field: InternalProtectedField) => {
+      // Chrome uses JSON serialization, which makes a native object of the InternalProtectedField.
+      const newField = new InternalProtectedField(field.fieldId, field.origin, field.element, field.options, field.ciphertextValue)
+      Object.assign(newField, field)
+      return newField
+    })
     Object.assign(tabState, response)
     ready.value = true
   })

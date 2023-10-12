@@ -62,6 +62,10 @@
     }
   ],
   "permissions": [
-    "storage"
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*/*"
   ]
 }

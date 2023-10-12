@@ -1,5 +1,5 @@
 import { reactive, toRaw } from 'vue'
-import { bufferToHex } from './utils'
+import { bufferFromBase64, bufferToBase64, bufferToHex } from './utils'
 
 export const keyTypes = [
   // [keyType, keyText, keyTextAdjective (used with the word "key" appended), keyDescription]
@@ -39,6 +39,11 @@ export function isRecipientKey(key: StoredKey): key is RecipientKey {
   return 'privateKey' in key
 }
 
+export class BDPParameterError extends Error { }
+export class KeyMissingError extends BDPParameterError { }
+export class DisallowedKeyError extends BDPParameterError { }
+export class InvalidCiphertextError extends BDPParameterError { }
+
 export default class KeyStore {
   static #keyStore: KeyStore | null = null
 
@@ -71,7 +76,7 @@ export default class KeyStore {
     return Object.keys(this.#userOnlyKeys).length
   }
   async generateUserOnlyKey(shortDescription: string, allowedOrigins: string[]): Promise<UserOnlyKey> {
-    const key = await window.crypto.subtle.generateKey(
+    const key = await crypto.subtle.generateKey(
       {
         name: 'AES-GCM',
         length: 256
@@ -91,6 +96,64 @@ export default class KeyStore {
     this.#userOnlyKeys[keyObj.keyId] = keyObj
     await this.#save()
     return keyObj
+  }
+  async encryptWithUserOnlyKey(plaintext: string, key: UserOnlyKey, origin: string): Promise<string> {
+    if (!key.allowedOrigins.includes(origin) && !key.allowedOrigins.includes('*')) {
+      throw new DisallowedKeyError('Key usage is not allowed for this origin.')
+    }
+
+    const iv = crypto.getRandomValues(new Uint8Array(12))
+    const ciphertext = await crypto.subtle.encrypt(
+      {
+        name: 'AES-GCM',
+        iv,
+      },
+      key.key,
+      new TextEncoder().encode(plaintext),
+    )
+    const data = {
+      keyId: key.keyId,
+      iv: bufferToBase64(iv),
+      ciphertext: bufferToBase64(ciphertext),
+    }
+
+    key.lastUsed = new Date()
+    if (!key.previouslyUsedOnOrigins.includes(origin)) {
+      key.previouslyUsedOnOrigins.push(origin)
+    }
+    this.#save()
+
+    return JSON.stringify(data)
+  }
+  async decryptWithUserOnlyKey(ciphertext: string, origin: string): Promise<[UserOnlyKey, string]> {
+    const data = JSON.parse(ciphertext)
+    if (typeof data !== 'object' || data.keyId === undefined || data.iv === undefined || data.ciphertext === undefined) {
+      throw new BDPParameterError('Invalid ciphertext.')
+    }
+
+    const key = this.#userOnlyKeys[data.keyId]
+    if (key === undefined) {
+      throw new KeyMissingError(`The key with ${data.keyId} was not found.`)
+    }
+    if (!key.allowedOrigins.includes(origin) && !key.allowedOrigins.includes('*')) {
+      throw new DisallowedKeyError(`Key usage of key ${data.keyId} is not allowed for this origin.`)
+    }
+
+    try {
+      const plaintextBuffer = await crypto.subtle.decrypt(
+        {
+          name: 'AES-GCM',
+          iv: bufferFromBase64(data.iv),
+        },
+        key.key,
+        bufferFromBase64(data.ciphertext),
+      )
+      const plaintext = new TextDecoder().decode(plaintextBuffer)
+
+      return [key, plaintext]
+    } catch (e) {
+      throw new InvalidCiphertextError('Invalid ciphertext.')
+    }
   }
   async deleteUserOnlyKey(keyId: string) {
     delete this.#userOnlyKeys[keyId]
