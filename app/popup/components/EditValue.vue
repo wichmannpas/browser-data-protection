@@ -46,7 +46,8 @@ watch(plaintextValue, () => {
     if (updateTimeout !== null) {
       window.clearTimeout(updateTimeout)
     }
-    updateTimeout = window.setTimeout(() => {
+    updateTimeout = window.setTimeout(async () => {
+      props.field
       console.warn('TODO: actually encrypt and propagate value')
       ciphertextFresh.value = true
     }, 1000)
@@ -131,6 +132,7 @@ async function finishEditing() {
           Used key:
         </strong>
         <span class="key-id">{{ usedKey.keyId }}</span>
+        ({{ usedKey.shortDescription }})
       </p>
 
       <label class="form-label">
@@ -138,13 +140,18 @@ async function finishEditing() {
         <input type="text" v-model="plaintextValue" class="form-input" :readonly="field.options.readOnly" />
       </label>
 
-      <button type="submit" class="btn btn-block btn-success">
+      <div v-if="ciphertextFresh" class="toast toast-success">
+        <i class="fa-solid fa-user-check"></i>
+        Ciphertext provided to web application is fresh.
+      </div>
+      <div v-else class="toast">
+        <i class="fa-solid fa-user-clock"></i>
+        Waiting for typing pause …
+      </div>
+
+      <button type="submit" class="btn btn-block btn-primary">
         Finish editing
       </button>
-
-      {{ plaintextValue }}
-
-      {{ ciphertextFresh }}
     </form>
   </div>
 </template>

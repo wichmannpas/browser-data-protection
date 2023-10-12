@@ -21,7 +21,7 @@ const keyStore = KeyStore.getKeyStore()
 const keyCount = computed(() => {
   return {
     'user-only': keyStore.getUserOnlyKeyCount(),
-    'password': keyStore.getSavedPasswordCount(),
+    'password': keyStore.getPasswordKeyCount(),
     'symmetric': keyStore.getSymmetricKeyCount(),
     'recipient': keyStore.getRecipientKeyCount(),
   }

@@ -4,11 +4,12 @@ import { bufferToHex } from './utils'
 export const keyTypes = [
   // [keyType, keyText, keyTextAdjective (used with the word "key" appended), keyDescription]
   ['user-only', 'User only', 'user-only', 'A key not shared with any other user. Can be transferred to your other devices/browsers.'],
-  ['password', 'Saved Passwords', 'saved password', 'A password that is used for the decryption of a specific value or set of values. It can optionally be saved here so it does not need to be entered every time. Every password is bound to a specific input field.'],
+  ['password', 'Password', 'password', 'A password that is used for the decryption of a specific value or set of values. Its encryption key can optionally be saved here so the password does not need to be entered every time. Every password is bound to a specific input field. The password itself is never stored, only the resulting key.'],
   ['symmetric', 'Symmetric', 'symmetric', 'A key that is shared with a specific set of other users.'],
   ['recipient', 'Recipient', 'recipient', 'A key that is shared/received with a specific user. Only the key owner (who knows the so-called private key) can decrypt values encrypted with this key. Other users can only encrypt values for this key.'],
 ]
 
+// Keys are a regular object following a StoredKey interface, which makes them easily serializable and deserializable for storage.local.
 export interface StoredKey {
   keyId: string
   shortDescription: string
@@ -19,6 +20,14 @@ export interface StoredKey {
 }
 
 export interface UserOnlyKey extends StoredKey {
+  key: CryptoKey
+}
+
+export interface PasswordKey extends StoredKey {
+  key: CryptoKey
+}
+
+export interface SymmetricKey extends StoredKey {
   key: CryptoKey
 }
 
@@ -33,14 +42,14 @@ export function isRecipientKey(key: StoredKey): key is RecipientKey {
 export default class KeyStore {
   static #keyStore: KeyStore | null = null
 
-  #userOnlyKeys: object
-  #savedPasswords: object
-  #symmetricKeys: object
-  #recipientKeys: object
+  #userOnlyKeys: { [key: string]: UserOnlyKey }
+  #passwords: { [key: string]: PasswordKey }
+  #symmetricKeys: { [key: string]: SymmetricKey }
+  #recipientKeys: { [key: string]: RecipientKey }
 
   constructor() {
     this.#userOnlyKeys = reactive(Object.create(null))
-    this.#savedPasswords = reactive(Object.create(null))
+    this.#passwords = reactive(Object.create(null))
     this.#symmetricKeys = reactive(Object.create(null))
     this.#recipientKeys = reactive(Object.create(null))
   }
@@ -88,11 +97,11 @@ export default class KeyStore {
     await this.#save()
   }
 
-  getSavedPassword() {
-    return Object.values(this.#savedPasswords).sort((a, b) => a.created.valueOf() - b.created.valueOf())
+  getPasswordKey() {
+    return Object.values(this.#passwords).sort((a, b) => a.created.valueOf() - b.created.valueOf())
   }
-  getSavedPasswordCount(): number {
-    return Object.keys(this.#savedPasswords).length
+  getPasswordKeyCount(): number {
+    return Object.keys(this.#passwords).length
   }
 
   getSymmetricKeys() {
@@ -126,7 +135,7 @@ export default class KeyStore {
   async load() {
     const storedData = await chrome.storage.local.get([
       'userOnlyKeys',
-      'savedPasswords',
+      'passwords',
       'symmetricKeys',
       'recipientKeys',
     ])
@@ -137,10 +146,10 @@ export default class KeyStore {
       Object.keys(this.#userOnlyKeys).forEach(key => delete this.#userOnlyKeys[key])
     }
 
-    if (storedData.savedPasswords !== undefined) {
-      Object.assign(this.#savedPasswords, await this.#deserializeValues(storedData.savedPasswords))
+    if (storedData.passwords !== undefined) {
+      Object.assign(this.#passwords, await this.#deserializeValues(storedData.passwords))
     } else {
-      Object.keys(this.#savedPasswords).forEach(key => delete this.#savedPasswords[key])
+      Object.keys(this.#passwords).forEach(key => delete this.#passwords[key])
     }
 
     if (storedData.symmetricKeys !== undefined) {
@@ -237,7 +246,7 @@ export default class KeyStore {
   async #save() {
     await chrome.storage.local.set({
       userOnlyKeys: await this.#serializeValues(toRaw(this.#userOnlyKeys)),
-      savedPasswords: await this.#serializeValues(toRaw(this.#savedPasswords)),
+      passwords: await this.#serializeValues(toRaw(this.#passwords)),
       symmetricKeys: await this.#serializeValues(toRaw(this.#symmetricKeys)),
       recipientKeys: await this.#serializeValues(toRaw(this.#recipientKeys)),
     })
