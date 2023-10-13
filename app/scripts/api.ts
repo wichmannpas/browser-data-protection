@@ -114,7 +114,7 @@ import { ProtectedFieldOptions } from "./ProtectedFieldOptions";
      * Set the ciphertext of this field.
      */
     setCiphertext(ciphertext: string) {
-      this.#ciphertextValue = ciphertext
+      this._updateCiphertextValue(ciphertext)
       window.postMessage({
         context: 'bdp',
         operation: 'setFieldCiphertext',

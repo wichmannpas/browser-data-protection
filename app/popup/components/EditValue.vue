@@ -33,7 +33,7 @@ const plaintextValue = ref('')
 
 const usedKey: Ref<StoredKey | null> = ref(null)
 
-onBeforeMount(async () => {
+async function loadCiphertext () {
   ready.value = false
   errorMessage.value = null
   await keyStore.load()
@@ -57,7 +57,10 @@ onBeforeMount(async () => {
   ready.value = true
   ciphertextFresh.value = true
   ciphertextLoading.value = false
-})
+}
+
+onBeforeMount(loadCiphertext)
+watch(() => props.field.ciphertextValue, loadCiphertext)
 
 const selectableKeys = computed(() => {
   if (props.field.options.protectionMode === 'user-only') {

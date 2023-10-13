@@ -134,8 +134,8 @@ chrome.runtime.onMessage.addListener(function (message: any, sender: chrome.runt
           // propagate change to browser action popup
           chrome.runtime.sendMessage({
             context: 'bdp',
-            operation: 'updateCiphertext',
-            fieldId: message.fieldId,
+            operation: 'updateCiphertextPopup',
+            fieldId: message.internalProtectedField.fieldId,
             ciphertextValue: message.ciphertextValue,
           })
           break

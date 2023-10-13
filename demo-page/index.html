@@ -31,9 +31,9 @@
       })
       console.log(cryptoField1)
       cryptoField1.setCiphertext('{"keyId":"aee8f9a3b6b57293ed5cddc4c6cd2515","iv":"KQo88Nf4Vpj6M3K+","ciphertext":"kWwXG0CfNSeQObfgK1+WED0B"}')
-      // setTimeout(() => {
-      //   cryptoField1.setCiphertext('{"keyId":"aee8f9a3b6b57293ed5cddc4c6cd2515a","iv":"KQo88Nf4Vpj6M3K+","ciphertext":"kWwXG0CfNSeQObfgK1+WED0B"}')
-      // }, 3500)
+      setTimeout(() => {
+        cryptoField1.setCiphertext('{"keyId":"aee8f9a3b6b57293ed5cddc4c6cd2515","iv":"YGE6KgPR7FGrcuYa","ciphertext":"0ecV/FOf688u3HZjT09aUV5dnAs="}')
+      }, 2000)
 
       const field2 = document.getElementById('field2')
       const cryptoField2 = await window.browserDataProtection.createProtectedField(field2, {

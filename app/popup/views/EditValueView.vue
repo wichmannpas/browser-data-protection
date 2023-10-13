@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeMount, reactive, ref } from 'vue'
+import { VueElement, computed, onBeforeMount, reactive, ref } from 'vue'
 import EditValue from '../components/EditValue.vue';
 import InternalProtectedField from '../../scripts/InternalProtectedField'
 
@@ -21,6 +21,42 @@ const activeField = computed(() => {
   return field as InternalProtectedField
 })
 
+const valueChanged = ref(false)
+const valueChangedFadeOut = ref(false)
+let valueChangedTimeout: number | null = null
+chrome.runtime.onMessage.addListener(message => {
+  if (message.context !== 'bdp') {
+    return
+  }
+  switch (message.operation) {
+    case 'updateCiphertextPopup':
+      if (message.fieldId !== tabState.activeFieldId) {
+        // not relevant, discard
+        return
+      }
+      // update the ciphertext value
+      const field = tabState.fields.find(field => field.fieldId === message.fieldId)
+      if (field === undefined) {
+        throw new Error('active field no longer found?!?')
+      }
+      field.ciphertextValue = message.ciphertextValue
+
+      valueChangedFadeOut.value = false
+      valueChanged.value = true
+      window.setTimeout(() => {
+        valueChangedFadeOut.value = true
+      }, 100)
+      if (valueChangedTimeout !== null) {
+        clearTimeout(valueChangedTimeout)
+      }
+      valueChangedTimeout = window.setTimeout(() => {
+        valueChanged.value = false
+      }, 6000)
+
+      break
+  }
+})
+
 onBeforeMount(() => {
   chrome.runtime.sendMessage({ context: 'bdp', operation: 'getTabState' }, response => {
     response.fields = response.fields.map((field: InternalProtectedField) => {
@@ -39,6 +75,11 @@ onBeforeMount(() => {
 <template>
   <div v-if="ready">
     <h5>Edit Field Value</h5>
+    <div v-if="valueChanged" class="toast toast-warning" :class="{ 'fade-out': valueChangedFadeOut }">
+      <i class="fa-solid fa-exclamation-triangle"></i>
+      The ciphertext value was just updated by the web application.
+      The value below was updated accordingly.
+    </div>
     <EditValue v-if="activeField" :field="activeField" />
     <div v-else-if="tabState.fields.length > 0">
       <p>
@@ -53,3 +94,10 @@ onBeforeMount(() => {
   </div>
   <div v-else class="loading loading-lg"></div>
 </template>
+
+<style scoped>
+.fade-out {
+  opacity: 0;
+  transition: opacity 4s ease-in 2s;
+}
+</style>
