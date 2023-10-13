@@ -31,15 +31,24 @@ const keyStore = KeyStore.getKeyStore()
 
 const plaintextValue = ref('')
 
+const previouslyUsedKey: Ref<StoredKey | null> = ref(null)
 const usedKey: Ref<StoredKey | null> = ref(null)
 
-async function loadCiphertext () {
+// keep track of the ciphertext value in a local variable to see whether a change comes from the web application (and requires a reload) or is just the "bounce back" of our own updated value that is propagated back to the prop
+let ciphertextValueCopy: string | null = null
+
+async function loadCiphertext() {
+  if (props.field.ciphertextValue === ciphertextValueCopy) {
+    return
+  }
+
   ready.value = false
   errorMessage.value = null
   await keyStore.load()
   if (props.field.ciphertextValue !== null) {
     try {
       const [key, plaintext] = await keyStore.decryptWithUserOnlyKey(props.field.ciphertextValue, props.field.origin)
+      ciphertextValueCopy = props.field.ciphertextValue
 
       usedKey.value = key
       plaintextValue.value = plaintext
@@ -52,6 +61,10 @@ async function loadCiphertext () {
       ready.value = true
       return
     }
+  } else {
+    previouslyUsedKey.value = usedKey.value
+    usedKey.value = null
+    plaintextValue.value = ''
   }
 
   ready.value = true
@@ -75,7 +88,8 @@ function navigateToCreateKey() {
 
 async function handleNewValue(value: string, key: StoredKey) {
   ciphertextLoading.value = true
-  await props.field.encryptNewValue(value, key, keyStore)
+  ciphertextValueCopy = await props.field.encryptNewValue(value, key, keyStore)
+  await props.field.propagateNewValue(ciphertextValueCopy)
   ciphertextLoading.value = false
   ciphertextFresh.value = true
 }
@@ -130,7 +144,7 @@ async function finishEditing() {
       <div v-if="usedKey === null">
         <template v-if="selectableKeys.length > 0">
           <p>
-            This field does not have a value yet.
+            This field does not have a value.
             <strong>
               Choose the key to use for this field.
             </strong>
@@ -138,7 +152,15 @@ async function finishEditing() {
           </p>
           <table class="table table-striped table-hover">
             <tbody>
-              <tr v-for="key in selectableKeys">
+              <tr v-for="key in selectableKeys"
+                :class="{ 'previous-key': previouslyUsedKey !== null && key.keyId === previouslyUsedKey.keyId }">
+                <td class="previous-key-star">
+                  <template v-if="previouslyUsedKey !== null && key.keyId === previouslyUsedKey.keyId">
+                    <span class="tooltip tooltip-right" data-tooltip="This key was used for the previous value.">
+                      <i class="fa-solid fa-star"></i>
+                    </span>
+                  </template>
+                </td>
                 <td class="key-id">{{ key.keyId }}</td>
                 <td>{{ key.shortDescription }}</td>
                 <td>
@@ -213,3 +235,14 @@ async function finishEditing() {
   </div>
   <div v-else class="loading loading-lg"></div>
 </template>
+
+<style scoped>
+tr.previous-key>td {
+  background: #7ebcff;
+}
+
+td.previous-key-star {
+  width: 1em;
+  text-align: center;
+}
+</style>

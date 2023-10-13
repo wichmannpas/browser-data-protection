@@ -41,7 +41,7 @@ import { ProtectedFieldOptions } from "./ProtectedFieldOptions";
     #fieldId: number
     #options: ProtectedFieldOptions
     #ciphertextValue: null | string
-    #ciphertextChangedCallback?: (ciphertext: string) => void
+    #ciphertextChangedCallback?: (ciphertext: string | null) => void
 
     constructor(fieldId: number, options: any) {
       this.#fieldId = fieldId
@@ -63,7 +63,7 @@ import { ProtectedFieldOptions } from "./ProtectedFieldOptions";
      * Update the ciphertext value, not caused by the web application.
      * If provided, the callback of this field is executed.
      */
-    _updateCiphertextValue(ciphertextValue: string) {
+    _updateCiphertextValue(ciphertextValue: string | null) {
       this.#ciphertextValue = ciphertextValue
       if (this.#ciphertextChangedCallback !== undefined) {
         this.#ciphertextChangedCallback(ciphertextValue)
@@ -113,7 +113,7 @@ import { ProtectedFieldOptions } from "./ProtectedFieldOptions";
     /**
      * Set the ciphertext of this field.
      */
-    setCiphertext(ciphertext: string) {
+    setCiphertext(ciphertext: null | string) {
       this._updateCiphertextValue(ciphertext)
       window.postMessage({
         context: 'bdp',
@@ -121,6 +121,10 @@ import { ProtectedFieldOptions } from "./ProtectedFieldOptions";
         ciphertext: ciphertext,
         fieldId: this.#fieldId,
       })
+    }
+
+    clearCiphertext() {
+      this.setCiphertext(null)
     }
   }
 

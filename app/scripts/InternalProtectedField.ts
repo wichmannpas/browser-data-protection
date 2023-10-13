@@ -48,19 +48,27 @@ export default class InternalProtectedField {
   }
 
   /**
-   * Encrypt a plaintext using the options of this field and the provided key.
-   * Updates the ciphertextValue on this field. Does not store the plaintext.
-   * Propagates the change to the content script.
+   * Encrypt a plaintext using the options of this field and the provided key, returning the ciphertext.
+   * Does not store the plaintext.
    * Called from the browser action popup.
    */
-  async encryptNewValue(plaintext: string, key: StoredKey, keyStore: KeyStore) {
+  async encryptNewValue(plaintext: string, key: StoredKey, keyStore: KeyStore): Promise<string> {
     switch (this.options.protectionMode) {
       case 'user-only':
-        this.ciphertextValue = await keyStore.encryptWithUserOnlyKey(plaintext, key as UserOnlyKey, this.origin)
+        return await keyStore.encryptWithUserOnlyKey(plaintext, key as UserOnlyKey, this.origin)
         break
       default:
         throw new Error(`Invalid protectionMode '${this.options.protectionMode}'`)
     }
+  }
+
+  /**
+   * Updates the ciphertextValue on this field.
+   * Propagates the change to the content script.
+   * Called from the browser action popup.
+   */
+  async propagateNewValue(value: string) {
+    this.ciphertextValue = value
 
     // Send message to the API script.
     if (this.fieldTabId === null) {
