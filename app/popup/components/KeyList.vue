@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { PropType, Ref, ref } from 'vue'
-import KeyStore, { RecipientKey, StoredKey, isRecipientKey } from '../../scripts/KeyStore';
+import KeyStore, { RecipientKey, StoredKey, isPasswordKey, isRecipientKey } from '../../scripts/KeyStore';
 
 const props = defineProps({
   keyType: {
@@ -20,18 +20,27 @@ const props = defineProps({
 const showDetailsForKey: Ref<null | string> = ref(null)
 
 function deleteKey(key: StoredKey | RecipientKey) {
-  if (!confirm(`Do you really want to PERMANENTLY DELETE the key with the id ${key.keyId}? You will not be able to view or update any values that use this key.`)) {
-    return
-  }
-  if (!isRecipientKey(key) || key.privateKey !== null) {
-    if (!confirm(`Asking again: Do you want to PERMANENTLY DELETE the key with the id ${key.keyId}? The operation cannot be undone. Unless the key has been shared with another device or user, it will not be possible to regain access to the values protected with it.`)) {
+  if (isPasswordKey(key)) {
+    if (!confirm(`Do you really want to permanently delete the key with the id ${key.keyId}? You will not be able to view or update any values that use this key. If you still know the corresponding password, you will be able to restore this key when presented with a ciphertext that was encrypted with this key.`)) {
       return
+    }
+  } else {
+    if (!confirm(`Do you really want to PERMANENTLY DELETE the key with the id ${key.keyId}? You will not be able to view or update any values that use this key.`)) {
+      return
+    }
+    if (!isRecipientKey(key) || key.privateKey !== null) {
+      if (!confirm(`Asking again: Do you want to PERMANENTLY DELETE the key with the id ${key.keyId}? The operation cannot be undone. Unless the key has been shared with another device or user, it will not be possible to regain access to the values protected with it.`)) {
+        return
+      }
     }
   }
 
   switch (props.keyType) {
     case 'user-only':
       props.keyStore.deleteUserOnlyKey(key.keyId)
+      break
+    case 'password':
+      props.keyStore.deletePasswordKey(key.keyId)
       break
     default:
       throw new Error(`unsupported key type ${props.keyType} for key deletion`)

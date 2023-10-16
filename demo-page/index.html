@@ -8,12 +8,17 @@
 
 <body>
   <h1>BrowserDataProtection Demo Page</h1>
+
+  <strong>Field 1: User-only, immediate</strong>
   <div id="field1"></div>
   <code id="ciphertextField1"></code>
 
+  <strong>Field 2: User-only, on-submit</strong>
   <div id="field2"></div>
 
+  <strong>Field 3: Password key</strong>
   <div id="field3"></div>
+  <code id="ciphertextField3"></code>
 
   <p>
     <a href="empty.html">Page without fields</a>
@@ -44,7 +49,6 @@
       })
       console.log(cryptoField2)
 
-      setTimeout(() => field1.click(), 50)
       /*
       // DEBUG
       function clickFieldAndTimeout (fieldA, fieldB) {
@@ -54,11 +58,19 @@
       setTimeout(() => clickFieldAndTimeout(field1, field2), 50)
       */
 
+      const ciphertextField3 = document.getElementById('ciphertextField3')
       const field3 = document.getElementById('field3')
       const cryptoField3 = await window.browserDataProtection.createProtectedField(field3, {
         protectionMode: 'password',
+        updateMode: 'on-submit',
+        ciphertextChangedCallback (ciphertext) {
+          ciphertextField3.innerText = ciphertext
+        }
       })
-      console.log(cryptoField2)
+      cryptoField3.setCiphertext('{"keyId":"81f06e43e9acdf47b0db0edefd2e903f","iv":"a/jMS4UnWiccKK7o","ciphertext":"ASq3UMIUwE5/pOKlC8T65h7r/xI=","salt":"qrnmFOnTTbmvQ+Tt5xEKTuXwIxUmDE/58HPXhZmf"}')
+      console.log(cryptoField3)
+
+      setTimeout(() => field3.click(), 50)
     })();
   </script>
 </body>

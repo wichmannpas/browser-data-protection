@@ -1,4 +1,4 @@
-import KeyStore, { StoredKey, UserOnlyKey } from "./KeyStore"
+import KeyStore, { PasswordKey, StoredKey, UserOnlyKey } from "./KeyStore"
 import { ProtectedFieldOptions } from "./ProtectedFieldOptions"
 
 /**
@@ -56,18 +56,19 @@ export default class InternalProtectedField {
     switch (this.options.protectionMode) {
       case 'user-only':
         return await keyStore.encryptWithUserOnlyKey(plaintext, key as UserOnlyKey, this.origin)
-        break
+      case 'password':
+        return await keyStore.encryptWithPasswordKey(plaintext, key as PasswordKey, this.origin)
       default:
         throw new Error(`Invalid protectionMode '${this.options.protectionMode}'`)
     }
   }
 
   /**
-   * Updates the ciphertextValue on this field.
+   * Updates the ciphertextValue on this field. Can be used to clear the value.
    * Propagates the change to the content script.
    * Called from the browser action popup.
    */
-  async propagateNewValue(value: string) {
+  async propagateNewValue(value: string | null) {
     this.ciphertextValue = value
 
     // Send message to the API script.
@@ -75,7 +76,7 @@ export default class InternalProtectedField {
       throw new Error(`InternalProtectedField ${this.fieldId} has no tabId`)
     }
     await chrome.scripting.executeScript({
-      func: (fieldId: number, ciphertextValue: string) => {
+      func: (fieldId: number, ciphertextValue: string | null) => {
         // @ts-expect-error
         window._bdp_internal_message({
           operation: 'updateCiphertext',

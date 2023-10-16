@@ -125,6 +125,8 @@ onBeforeMount(() => {
 
         <KeyList v-if="activeKeyType === 'user-only'" :keys="keyStore.getUserOnlyKeys()" :key-store="keyStore"
           :key-type="activeKeyType" />
+        <KeyList v-if="activeKeyType === 'password'" :keys="keyStore.getPasswordKeys()" :key-store="keyStore"
+          :key-type="activeKeyType" />
       </div>
     </div>
   </div>

@@ -1,4 +1,4 @@
-import { reactive, toRaw } from 'vue'
+import { provide, reactive, toRaw } from 'vue'
 import { bufferFromBase64, bufferToBase64, bufferToHex } from './utils'
 
 export const keyTypes = [
@@ -25,6 +25,10 @@ export interface UserOnlyKey extends StoredKey {
 
 export interface PasswordKey extends StoredKey {
   key: CryptoKey
+  salt: string
+}
+export function isPasswordKey(key: StoredKey): key is PasswordKey {
+  return 'salt' in key
 }
 
 export interface SymmetricKey extends StoredKey {
@@ -44,23 +48,82 @@ export class KeyMissingError extends BDPParameterError { }
 export class DisallowedKeyError extends BDPParameterError { }
 export class InvalidCiphertextError extends BDPParameterError { }
 
+interface CiphertextData {
+  keyId: string
+  iv: string
+  ciphertext: string
+}
+interface PasswordKeyCiphertextData extends CiphertextData {
+  salt: string
+}
+
 export default class KeyStore {
   static #keyStore: KeyStore | null = null
 
   #userOnlyKeys: { [key: string]: UserOnlyKey }
-  #passwords: { [key: string]: PasswordKey }
+  #passwordKeys: { [key: string]: PasswordKey }
   #symmetricKeys: { [key: string]: SymmetricKey }
   #recipientKeys: { [key: string]: RecipientKey }
 
   constructor() {
     this.#userOnlyKeys = reactive(Object.create(null))
-    this.#passwords = reactive(Object.create(null))
+    this.#passwordKeys = reactive(Object.create(null))
     this.#symmetricKeys = reactive(Object.create(null))
     this.#recipientKeys = reactive(Object.create(null))
   }
 
   static getKeyStore(): KeyStore {
     return KeyStore.#keyStore ?? (KeyStore.#keyStore = new KeyStore())
+  }
+
+  async #encryptAES(plaintext: string, key: UserOnlyKey | PasswordKey, origin: string): Promise<CiphertextData> {
+    if (!key.allowedOrigins.includes(origin) && !key.allowedOrigins.includes('*')) {
+      throw new DisallowedKeyError('Key usage is not allowed for this origin.')
+    }
+
+    const iv = crypto.getRandomValues(new Uint8Array(12))
+    const ciphertext = await crypto.subtle.encrypt(
+      {
+        name: 'AES-GCM',
+        iv,
+      },
+      key.key,
+      new TextEncoder().encode(plaintext),
+    )
+    const data = {
+      keyId: key.keyId,
+      iv: bufferToBase64(iv),
+      ciphertext: bufferToBase64(ciphertext),
+    }
+
+    key.lastUsed = new Date()
+    if (!key.previouslyUsedOnOrigins.includes(origin)) {
+      key.previouslyUsedOnOrigins.push(origin)
+    }
+    this.#save()
+
+    return data
+  }
+  async #decryptAES(ciphertextData: { keyId: string, iv: string, ciphertext: string }, key: UserOnlyKey | PasswordKey, origin: string): Promise<string> {
+    if (!key.allowedOrigins.includes(origin) && !key.allowedOrigins.includes('*')) {
+      throw new DisallowedKeyError(`Key usage of key ${ciphertextData.keyId} is not allowed for this origin.`)
+    }
+
+    try {
+      const plaintextBuffer = await crypto.subtle.decrypt(
+        {
+          name: 'AES-GCM',
+          iv: bufferFromBase64(ciphertextData.iv),
+        },
+        key.key,
+        bufferFromBase64(ciphertextData.ciphertext),
+      )
+      const plaintext = new TextDecoder().decode(plaintextBuffer)
+
+      return plaintext
+    } catch (e) {
+      throw new InvalidCiphertextError('Invalid ciphertext.')
+    }
   }
 
   /**
@@ -98,32 +161,7 @@ export default class KeyStore {
     return keyObj
   }
   async encryptWithUserOnlyKey(plaintext: string, key: UserOnlyKey, origin: string): Promise<string> {
-    if (!key.allowedOrigins.includes(origin) && !key.allowedOrigins.includes('*')) {
-      throw new DisallowedKeyError('Key usage is not allowed for this origin.')
-    }
-
-    const iv = crypto.getRandomValues(new Uint8Array(12))
-    const ciphertext = await crypto.subtle.encrypt(
-      {
-        name: 'AES-GCM',
-        iv,
-      },
-      key.key,
-      new TextEncoder().encode(plaintext),
-    )
-    const data = {
-      keyId: key.keyId,
-      iv: bufferToBase64(iv),
-      ciphertext: bufferToBase64(ciphertext),
-    }
-
-    key.lastUsed = new Date()
-    if (!key.previouslyUsedOnOrigins.includes(origin)) {
-      key.previouslyUsedOnOrigins.push(origin)
-    }
-    this.#save()
-
-    return JSON.stringify(data)
+    return JSON.stringify(await this.#encryptAES(plaintext, key, origin))
   }
   async decryptWithUserOnlyKey(ciphertext: string, origin: string): Promise<[UserOnlyKey, string]> {
     const data = JSON.parse(ciphertext)
@@ -135,36 +173,122 @@ export default class KeyStore {
     if (key === undefined) {
       throw new KeyMissingError(`The key with ${data.keyId} was not found.`)
     }
-    if (!key.allowedOrigins.includes(origin) && !key.allowedOrigins.includes('*')) {
-      throw new DisallowedKeyError(`Key usage of key ${data.keyId} is not allowed for this origin.`)
-    }
 
-    try {
-      const plaintextBuffer = await crypto.subtle.decrypt(
-        {
-          name: 'AES-GCM',
-          iv: bufferFromBase64(data.iv),
-        },
-        key.key,
-        bufferFromBase64(data.ciphertext),
-      )
-      const plaintext = new TextDecoder().decode(plaintextBuffer)
-
-      return [key, plaintext]
-    } catch (e) {
-      throw new InvalidCiphertextError('Invalid ciphertext.')
-    }
+    return [key, await this.#decryptAES(data, key, origin)]
   }
   async deleteUserOnlyKey(keyId: string) {
     delete this.#userOnlyKeys[keyId]
     await this.#save()
   }
 
-  getPasswordKey() {
-    return Object.values(this.#passwords).sort((a, b) => a.created.valueOf() - b.created.valueOf())
+  getPasswordKeys() {
+    return Object.values(this.#passwordKeys).sort((a, b) => a.created.valueOf() - b.created.valueOf())
+  }
+  getPasswordKeysForOrigin(origin: string) {
+    return this.getPasswordKeys().filter(key => key.allowedOrigins.includes(origin) || key.allowedOrigins.includes('*'))
   }
   getPasswordKeyCount(): number {
-    return Object.keys(this.#passwords).length
+    return Object.keys(this.#passwordKeys).length
+  }
+  /**
+   * Generate a new password key with a unique salt. To re-generate *a specific key* again, the existing salt of the ciphertext needs to be provided.
+   * Otherwise, a salt MUST NOT be provided, as it is essential that every new key uses a different salt. When providing a salt, the keyId of the
+   * key that is expected to be returned must be provided. Otherwise, no key is stored nor returned.
+   */
+  async generatePasswordKey(password: string, shortDescription: string, allowedOrigins: string[], storePersistently: boolean, existingSalt?: string, existingKeyId?: string): Promise<PasswordKey> {
+    const passwordKey = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(password),
+      'PBKDF2',
+      false,
+      ['deriveBits', 'deriveKey'],
+    )
+    let salt: ArrayBuffer
+    if (existingSalt !== undefined) {
+      salt = bufferFromBase64(existingSalt)
+    } else {
+      salt = crypto.getRandomValues(new Uint8Array(30))
+    }
+    const key = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt,
+        iterations: 250000,
+        hash: 'SHA-512',
+      },
+      passwordKey,
+      {
+        name: 'AES-GCM',
+        length: 256,
+      },
+      true,
+      ['encrypt', 'decrypt'],
+    )
+
+    const keyObj: PasswordKey = {
+      keyId: await this.#deriveKeyId(key),
+      shortDescription,
+      created: new Date(),
+      lastUsed: null,
+      allowedOrigins,
+      previouslyUsedOnOrigins: [],
+      key,
+      salt: bufferToBase64(salt),
+    }
+
+    if (existingSalt !== undefined) {
+      // when a salt is provided, the keyId must be provided and valid as well
+      if (existingKeyId !== keyObj.keyId) {
+        throw new BDPParameterError('Invalid password.')
+      }
+    }
+
+    if (storePersistently) {
+      this.#passwordKeys[keyObj.keyId] = keyObj
+      await this.#save()
+    }
+
+    return keyObj
+  }
+  async encryptWithPasswordKey(plaintext: string, key: PasswordKey, origin: string): Promise<string> {
+    const data = await this.#encryptAES(plaintext, key, origin) as PasswordKeyCiphertextData
+    data.salt = key.salt
+    return JSON.stringify(data)
+  }
+  async decryptWithPasswordKey(ciphertext: string, origin: string, key?: PasswordKey, password?: string, storeKey?: boolean): Promise<[PasswordKey, string]> {
+    const data = JSON.parse(ciphertext)
+    if (typeof data !== 'object' || data.keyId === undefined || data.iv === undefined || data.ciphertext === undefined || data.salt === undefined) {
+      throw new BDPParameterError('Invalid ciphertext.')
+    }
+
+    if (key !== undefined && password !== undefined) {
+      throw new Error('Either a key or a password or none of both must be provided, not both.')
+    }
+
+    if (key === undefined && password === undefined) {
+      key = this.#passwordKeys[data.keyId]
+      if (key === undefined) {
+        throw new KeyMissingError(`The key with ${data.keyId} was not found.`)
+      }
+    }
+
+    if (key === undefined && password !== undefined) {
+      try {
+        key = await this.generatePasswordKey(password, 'password-derived key', ['*'], storeKey ?? false, data.salt, data.keyId)
+      } catch (e) {
+        if (!(e instanceof BDPParameterError)) {
+          throw e
+        }
+        throw new BDPParameterError('The password is invalid.')
+      }
+    }
+
+    // key is now guaranteed to be defined as every other case is handled above to either provide a key or to throw an error.
+    return [key as PasswordKey, await this.#decryptAES(data, key as PasswordKey, origin)]
+  }
+  async deletePasswordKey(keyId: string) {
+    delete this.#passwordKeys[keyId]
+    await this.#save()
   }
 
   getSymmetricKeys() {
@@ -198,7 +322,7 @@ export default class KeyStore {
   async load() {
     const storedData = await chrome.storage.local.get([
       'userOnlyKeys',
-      'passwords',
+      'passwordKeys',
       'symmetricKeys',
       'recipientKeys',
     ])
@@ -209,10 +333,10 @@ export default class KeyStore {
       Object.keys(this.#userOnlyKeys).forEach(key => delete this.#userOnlyKeys[key])
     }
 
-    if (storedData.passwords !== undefined) {
-      Object.assign(this.#passwords, await this.#deserializeValues(storedData.passwords))
+    if (storedData.passwordKeys !== undefined) {
+      Object.assign(this.#passwordKeys, await this.#deserializeValues(storedData.passwordKeys))
     } else {
-      Object.keys(this.#passwords).forEach(key => delete this.#passwords[key])
+      Object.keys(this.#passwordKeys).forEach(key => delete this.#passwordKeys[key])
     }
 
     if (storedData.symmetricKeys !== undefined) {
@@ -309,7 +433,7 @@ export default class KeyStore {
   async #save() {
     await chrome.storage.local.set({
       userOnlyKeys: await this.#serializeValues(toRaw(this.#userOnlyKeys)),
-      passwords: await this.#serializeValues(toRaw(this.#passwords)),
+      passwordKeys: await this.#serializeValues(toRaw(this.#passwordKeys)),
       symmetricKeys: await this.#serializeValues(toRaw(this.#symmetricKeys)),
       recipientKeys: await this.#serializeValues(toRaw(this.#recipientKeys)),
     })
