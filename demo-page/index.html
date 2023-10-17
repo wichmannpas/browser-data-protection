@@ -9,16 +9,22 @@
 <body>
   <h1>BrowserDataProtection Demo Page</h1>
 
-  <strong>Field 1: User-only, immediate</strong>
-  <div id="field1"></div>
-  <code id="ciphertextField1"></code>
+  <div>
+    <strong>Field 1: User-only, immediate</strong>
+    <div id="field1"></div>
+    <code id="ciphertextField1"></code>
+  </div>
 
-  <strong>Field 2: User-only, on-submit</strong>
-  <div id="field2"></div>
+  <div>
+    <strong>Field 2: User-only, on-submit</strong>
+    <div id="field2"></div>
+  </div>
 
-  <strong>Field 3: Password key</strong>
-  <div id="field3"></div>
-  <code id="ciphertextField3"></code>
+  <div>
+    <strong>Field 3: Password key</strong>
+    <div id="field3"></div>
+    <code id="ciphertextField3"></code>
+  </div>
 
   <p>
     <a href="empty.html">Page without fields</a>
@@ -28,23 +34,23 @@
       const ciphertextField1 = document.getElementById('ciphertextField1')
       const field1 = document.getElementById('field1')
       const cryptoField1 = await window.browserDataProtection.createProtectedField(field1, {
-        protectionMode: 'user-only',
-        distributionMode: 'local',
+        protectionMode: 'symmetric',
+        distributionMode: 'user-only',
         ciphertextChangedCallback (ciphertext) {
           ciphertextField1.innerText = ciphertext
         }
       })
       console.log(cryptoField1)
-      cryptoField1.setCiphertext('{"keyId":"aee8f9a3b6b57293ed5cddc4c6cd2515","iv":"KQo88Nf4Vpj6M3K+","ciphertext":"kWwXG0CfNSeQObfgK1+WED0B"}')
+      cryptoField1.setCiphertext('{"keyId":"d76800c9e5ea3ac6eebc6c5cdab7ff37","iv":"7SJzVTQiAnyZehX1","ciphertext":"a1l6OkNgazFKV3ytA/mCPIDwxvQaDXA="}')
       setTimeout(() => {
-        cryptoField1.setCiphertext('{"keyId":"aee8f9a3b6b57293ed5cddc4c6cd2515","iv":"YGE6KgPR7FGrcuYa","ciphertext":"0ecV/FOf688u3HZjT09aUV5dnAs="}')
-        /// cryptoField1.setCiphertext(null)
+        cryptoField1.setCiphertext('{"keyId":"d76800c9e5ea3ac6eebc6c5cdab7ff37","iv":"d3GkEnTXzmFIfOX7","ciphertext":"Y7XVMYFxg4/x67cB9Et9U9nO"}')
+        // cryptoField1.setCiphertext(null)
       }, 2000)
 
       const field2 = document.getElementById('field2')
       const cryptoField2 = await window.browserDataProtection.createProtectedField(field2, {
-        protectionMode: 'user-only',
-        distributionMode: 'local',
+        protectionMode: 'symmetric',
+        distributionMode: 'user-only',
         updateMode: 'on-submit',
       })
       console.log(cryptoField2)
@@ -70,7 +76,7 @@
       cryptoField3.setCiphertext('{"keyId":"81f06e43e9acdf47b0db0edefd2e903f","iv":"a/jMS4UnWiccKK7o","ciphertext":"ASq3UMIUwE5/pOKlC8T65h7r/xI=","salt":"qrnmFOnTTbmvQ+Tt5xEKTuXwIxUmDE/58HPXhZmf"}')
       console.log(cryptoField3)
 
-      setTimeout(() => field3.click(), 50)
+      setTimeout(() => field1.click(), 50)
     })();
   </script>
 </body>

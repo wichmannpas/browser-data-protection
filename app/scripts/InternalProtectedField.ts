@@ -1,4 +1,4 @@
-import KeyStore, { PasswordKey, StoredKey, UserOnlyKey } from "./KeyStore"
+import KeyStore, { PasswordKey, StoredKey, SymmetricKey } from "./KeyStore"
 import { ProtectedFieldOptions } from "./ProtectedFieldOptions"
 
 /**
@@ -54,8 +54,8 @@ export default class InternalProtectedField {
    */
   async encryptNewValue(plaintext: string, key: StoredKey, keyStore: KeyStore): Promise<string> {
     switch (this.options.protectionMode) {
-      case 'user-only':
-        return await keyStore.encryptWithUserOnlyKey(plaintext, key as UserOnlyKey, this.origin)
+      case 'symmetric':
+        return await keyStore.encryptWithSymmetricKey(plaintext, key as SymmetricKey, this.origin)
       case 'password':
         return await keyStore.encryptWithPasswordKey(plaintext, key as PasswordKey, this.origin)
       default:

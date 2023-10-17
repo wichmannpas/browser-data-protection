@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Ref, computed, onBeforeMount, ref, watch } from 'vue'
 import InternalProtectedField from '../../scripts/InternalProtectedField'
-import KeyStore, { BDPParameterError, KeyMissingError, PasswordKey, StoredKey, keyTypes } from '../../scripts/KeyStore';
-import { activeView, createKeyFor } from '../../scripts/popupAppState';
+import KeyStore, { BDPParameterError, KeyMissingError, PasswordKey, StoredKey, SymmetricKey, keyTypes } from '../../scripts/KeyStore';
+import { activeView, createKeyFor, createKeyForDistributionMode } from '../../scripts/popupAppState';
 import zxcvbn from 'zxcvbn'
+import { ProtectedFieldOptions } from '../../scripts/ProtectedFieldOptions';
 
 const props = defineProps({
   field: {
@@ -22,6 +23,7 @@ const fieldKeyTypeData = computed(() => {
 
 const ready = ref(false)
 const errorMessage: Ref<null | string> = ref(null)
+const errorKeyMissing = ref(false)
 
 // whether the ciphertext provided to the web application is fresh, i.e., the newest changes to the plaintext value are reflected.
 const ciphertextProvidedToWebApp = ref(false)
@@ -98,6 +100,7 @@ async function loadCiphertext() {
 
   ready.value = false
   errorMessage.value = null
+  errorKeyMissing.value = false
   chosenPassword.value = ''
   chosenPasswordStoreKey.value = true
   await keyStore.load()
@@ -105,8 +108,8 @@ async function loadCiphertext() {
     let key: StoredKey, plaintext: string
     try {
       switch (props.field.options.protectionMode) {
-        case 'user-only':
-          [key, plaintext] = await keyStore.decryptWithUserOnlyKey(props.field.ciphertextValue, props.field.origin)
+        case 'symmetric':
+          [key, plaintext] = await keyStore.decryptWithSymmetricKey(props.field.ciphertextValue, props.field.origin)
           break
         case 'password':
           try {
@@ -137,6 +140,7 @@ async function loadCiphertext() {
       }
 
       errorMessage.value = e.message
+      errorKeyMissing.value = e instanceof KeyMissingError
       ready.value = true
       return
     }
@@ -157,8 +161,8 @@ watch(() => props.field.ciphertextValue, loadCiphertext)
 
 const selectableKeys = computed(() => {
   switch (props.field.options.protectionMode) {
-    case 'user-only':
-      return keyStore.getUserOnlyKeysForOrigin(props.field.origin)
+    case 'symmetric':
+      return keyStore.getSymmetricKeysForOrigin(props.field.origin, props.field.options.distributionMode as SymmetricKey['distributionMode'])
     case 'password':
       return keyStore.getPasswordKeysForOrigin(props.field.origin)
     default:
@@ -168,6 +172,7 @@ const selectableKeys = computed(() => {
 function navigateToCreateKey() {
   activeView.value = 'manage-keys'
   createKeyFor.value = props.field.options.protectionMode
+  createKeyForDistributionMode.value = props.field.options.distributionMode as ProtectedFieldOptions['distributionMode']
 }
 
 async function handleNewValue(value: string, key: StoredKey) {
@@ -405,7 +410,7 @@ function clearField() {
       </form>
     </div>
     <div v-else class="toast toast-error">
-      <strong>The web application provided an invalid ciphertext.</strong>
+      <strong v-if="!errorKeyMissing">The web application provided an invalid ciphertext.</strong>
       {{ errorMessage }}
     </div>
   </div>

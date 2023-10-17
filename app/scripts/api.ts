@@ -7,28 +7,28 @@ import { ProtectedFieldOptions } from "./ProtectedFieldOptions";
 (function () {
   const VALID_OPTIONS = {
     protectionMode: [
-      'user-only',
-      'password',
       'symmetric',
+      'password',
       'recipient',
     ],
     // distribution mode and the protection modes that are allowed to use it
     distributionMode: [
       {
-        mode: 'local',
-        protectionModes: ['user-only'],
+        mode: 'user-only',
+        protectionModes: ['symmetric'],
+      },
+      {
+        mode: 'external',
+        protectionModes: ['symmetric', 'recipient'],
       },
       {
         mode: 'direct-plain',
         protectionModes: ['recipient'],
       },
+      // direct-wrapped does not support symmetric mode, as this would be equivalent to the protection mode password
       {
         mode: 'direct-wrapped',
         protectionModes: ['recipient'],
-      },
-      {
-        mode: 'external',
-        protectionModes: ['symmetric', 'recipient'],
       },
       {
         mode: 'key-agreement',

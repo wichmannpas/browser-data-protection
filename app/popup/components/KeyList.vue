@@ -37,7 +37,7 @@ function deleteKey(key: StoredKey | RecipientKey) {
 
   switch (props.keyType) {
     case 'user-only':
-      props.keyStore.deleteUserOnlyKey(key.keyId)
+      props.keyStore.deleteSymmetricKey(key.keyId)
       break
     case 'password':
       props.keyStore.deletePasswordKey(key.keyId)
@@ -123,6 +123,9 @@ function deleteKey(key: StoredKey | RecipientKey) {
                 <strong>Created:</strong>
                 {{ key.created.toLocaleDateString() }}
                 {{ key.created.toLocaleTimeString() }}
+                <div v-if="keyType === 'symmetric'">
+                  <strong>Export Key</strong>
+                </div>
               </td>
             </tr>
             <tr>

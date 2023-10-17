@@ -2,11 +2,11 @@
 import { computed, onBeforeMount, reactive, ref, watch } from 'vue'
 import KeyStore, { keyTypes } from '../../scripts/KeyStore';
 import KeyList from '../components/KeyList.vue';
-import { createKeyFor } from '../../scripts/popupAppState';
+import { createKeyFor, createKeyForDistributionMode } from '../../scripts/popupAppState';
 
 const ready = ref(false)
 
-const activeKeyType = ref('user-only')
+const activeKeyType = ref('symmetric')
 const activeKeyTypeData = computed(() => {
   const keyTypeData = keyTypes.find(keyType => keyType[0] === activeKeyType.value)
   if (keyTypeData === undefined) {
@@ -20,7 +20,6 @@ const keyStore = KeyStore.getKeyStore()
 
 const keyCount = computed(() => {
   return {
-    'user-only': keyStore.getUserOnlyKeyCount(),
     'password': keyStore.getPasswordKeyCount(),
     'symmetric': keyStore.getSymmetricKeyCount(),
     'recipient': keyStore.getRecipientKeyCount(),
@@ -31,10 +30,12 @@ const generateNewKeyActive = ref(false)
 const generateNewKeyData = reactive({
   description: '',
   allowedOrigins: '*',
+  distributionMode: 'user-only',
 })
 function clearGenerateNewKeyData() {
   generateNewKeyData.description = ''
   generateNewKeyData.allowedOrigins = '*'
+  generateNewKeyData.distributionMode = 'user-only'
 }
 watch(activeKeyType, () => {
   generateNewKeyActive.value = false
@@ -42,9 +43,9 @@ watch(activeKeyType, () => {
 })
 function generateNewKey(keyType: string) {
   switch (keyType) {
-    case 'user-only':
+    case 'symmetric':
       generateNewKeyActive.value = false
-      keyStore.generateUserOnlyKey(generateNewKeyData.description, generateNewKeyData.allowedOrigins.trim().split(' '))
+      keyStore.generateSymmetricKey(generateNewKeyData.description, generateNewKeyData.allowedOrigins.trim().split(' '), 'user-only')
       clearGenerateNewKeyData()
       break
     default:
@@ -60,6 +61,10 @@ onBeforeMount(() => {
   if (createKeyFor.value !== null) {
     activeKeyType.value = createKeyFor.value
     createKeyFor.value = null
+    if (createKeyForDistributionMode.value !== null) {
+      generateNewKeyData.distributionMode = createKeyForDistributionMode.value as string
+      createKeyForDistributionMode.value = null
+    }
     generateNewKeyActive.value = true
   }
 })
@@ -106,6 +111,16 @@ onBeforeMount(() => {
               <input type="text" class="form-input" placeholder="A short description to help you recognize this key."
                 v-model="generateNewKeyData.description" />
             </label>
+            <label v-if="activeKeyType === 'symmetric'" class="form-label">
+              Distribution mode
+              <select class="form-input"
+                placeholder="The distribution mode defines how the key may be shared with others."
+                v-model="generateNewKeyData.distributionMode">
+                <option value="user-only">User only</option>
+                <option value="external">External</option>
+                <option value="key-agreement">Key agreement</option>
+              </select>
+            </label>
             <label class="form-label">
               Allowed origins (space-separated)
               <input type="text" class="form-input" v-model="generateNewKeyData.allowedOrigins"
@@ -123,7 +138,7 @@ onBeforeMount(() => {
           <hr />
         </div>
 
-        <KeyList v-if="activeKeyType === 'user-only'" :keys="keyStore.getUserOnlyKeys()" :key-store="keyStore"
+        <KeyList v-if="activeKeyType === 'symmetric'" :keys="keyStore.getSymmetricKeys()" :key-store="keyStore"
           :key-type="activeKeyType" />
         <KeyList v-if="activeKeyType === 'password'" :keys="keyStore.getPasswordKeys()" :key-store="keyStore"
           :key-type="activeKeyType" />

@@ -3,9 +3,8 @@ import { bufferFromBase64, bufferToBase64, bufferToHex } from './utils'
 
 export const keyTypes = [
   // [keyType, keyText, keyTextAdjective (used with the word "key" appended), keyDescription]
-  ['user-only', 'User only', 'user-only', 'A key not shared with any other user. Can be transferred to your other devices/browsers.'],
+  ['symmetric', 'Symmetric', 'symmetric', 'A key that either is used only by a single user or that is additionaly shared with a specific set of other users, depending on the key type.'],
   ['password', 'Password', 'password', 'A password that is used for the decryption of a specific value or set of values. Its encryption key can optionally be saved here so the password does not need to be entered every time. Every password is bound to a specific input field. The password itself is never stored, only the resulting key.'],
-  ['symmetric', 'Symmetric', 'symmetric', 'A key that is shared with a specific set of other users.'],
   ['recipient', 'Recipient', 'recipient', 'A key that is shared/received with a specific user. Only the key owner (who knows the so-called private key) can decrypt values encrypted with this key. Other users can only encrypt values for this key.'],
 ]
 
@@ -19,8 +18,9 @@ export interface StoredKey {
   previouslyUsedOnOrigins: string[]
 }
 
-export interface UserOnlyKey extends StoredKey {
+export interface SymmetricKey extends StoredKey {
   key: CryptoKey
+  distributionMode: 'user-only' | 'external' | 'key-agreement'
 }
 
 export interface PasswordKey extends StoredKey {
@@ -29,10 +29,6 @@ export interface PasswordKey extends StoredKey {
 }
 export function isPasswordKey(key: StoredKey): key is PasswordKey {
   return 'salt' in key
-}
-
-export interface SymmetricKey extends StoredKey {
-  key: CryptoKey
 }
 
 export interface RecipientKey extends StoredKey {
@@ -60,13 +56,11 @@ interface PasswordKeyCiphertextData extends CiphertextData {
 export default class KeyStore {
   static #keyStore: KeyStore | null = null
 
-  #userOnlyKeys: { [key: string]: UserOnlyKey }
-  #passwordKeys: { [key: string]: PasswordKey }
   #symmetricKeys: { [key: string]: SymmetricKey }
+  #passwordKeys: { [key: string]: PasswordKey }
   #recipientKeys: { [key: string]: RecipientKey }
 
   constructor() {
-    this.#userOnlyKeys = reactive(Object.create(null))
     this.#passwordKeys = reactive(Object.create(null))
     this.#symmetricKeys = reactive(Object.create(null))
     this.#recipientKeys = reactive(Object.create(null))
@@ -76,7 +70,7 @@ export default class KeyStore {
     return KeyStore.#keyStore ?? (KeyStore.#keyStore = new KeyStore())
   }
 
-  async #encryptAES(plaintext: string, key: UserOnlyKey | PasswordKey, origin: string): Promise<CiphertextData> {
+  async #encryptAES(plaintext: string, key: SymmetricKey | PasswordKey, origin: string): Promise<CiphertextData> {
     if (!key.allowedOrigins.includes(origin) && !key.allowedOrigins.includes('*')) {
       throw new DisallowedKeyError('Key usage is not allowed for this origin.')
     }
@@ -104,7 +98,7 @@ export default class KeyStore {
 
     return data
   }
-  async #decryptAES(ciphertextData: { keyId: string, iv: string, ciphertext: string }, key: UserOnlyKey | PasswordKey, origin: string): Promise<string> {
+  async #decryptAES(ciphertextData: { keyId: string, iv: string, ciphertext: string }, key: SymmetricKey | PasswordKey, origin: string): Promise<string> {
     if (!key.allowedOrigins.includes(origin) && !key.allowedOrigins.includes('*')) {
       throw new DisallowedKeyError(`Key usage of key ${ciphertextData.keyId} is not allowed for this origin.`)
     }
@@ -126,19 +120,20 @@ export default class KeyStore {
     }
   }
 
-  /**
-   * Get the user only keys sorted descending by their creation date.
-   */
-  getUserOnlyKeys() {
-    return Object.values(this.#userOnlyKeys).sort((a, b) => a.created.valueOf() - b.created.valueOf())
+  getSymmetricKeys() {
+    return Object.values(this.#symmetricKeys).sort((a, b) => a.created.valueOf() - b.created.valueOf())
   }
-  getUserOnlyKeysForOrigin(origin: string) {
-    return this.getUserOnlyKeys().filter(key => key.allowedOrigins.includes(origin) || key.allowedOrigins.includes('*'))
+  getSymmetricKeysForOrigin(origin: string, distributionMode?: SymmetricKey['distributionMode']) {
+    let keys = this.getSymmetricKeys().filter(key => key.allowedOrigins.includes(origin) || key.allowedOrigins.includes('*'))
+    if (distributionMode !== undefined) {
+      keys = keys.filter(key => key.distributionMode === distributionMode)
+    }
+    return keys
   }
-  getUserOnlyKeyCount(): number {
-    return Object.keys(this.#userOnlyKeys).length
+  getSymmetricKeyCount(): number {
+    return Object.keys(this.#symmetricKeys).length
   }
-  async generateUserOnlyKey(shortDescription: string, allowedOrigins: string[]): Promise<UserOnlyKey> {
+  async generateSymmetricKey(shortDescription: string, allowedOrigins: string[], distributionMode: SymmetricKey['distributionMode']): Promise<SymmetricKey> {
     const key = await crypto.subtle.generateKey(
       {
         name: 'AES-GCM',
@@ -147,7 +142,7 @@ export default class KeyStore {
       true,
       ['encrypt', 'decrypt'],
     )
-    const keyObj: UserOnlyKey = {
+    const keyObj: SymmetricKey = {
       keyId: await this.#deriveKeyId(key),
       shortDescription,
       created: new Date(),
@@ -155,29 +150,35 @@ export default class KeyStore {
       allowedOrigins,
       previouslyUsedOnOrigins: [],
       key,
+      distributionMode,
     }
-    this.#userOnlyKeys[keyObj.keyId] = keyObj
+    this.#symmetricKeys[keyObj.keyId] = keyObj
     await this.#save()
     return keyObj
   }
-  async encryptWithUserOnlyKey(plaintext: string, key: UserOnlyKey, origin: string): Promise<string> {
+  async encryptWithSymmetricKey(plaintext: string, key: SymmetricKey, origin: string): Promise<string> {
     return JSON.stringify(await this.#encryptAES(plaintext, key, origin))
   }
-  async decryptWithUserOnlyKey(ciphertext: string, origin: string): Promise<[UserOnlyKey, string]> {
-    const data = JSON.parse(ciphertext)
+  async decryptWithSymmetricKey(ciphertext: string, origin: string): Promise<[SymmetricKey, string]> {
+    let data: CiphertextData
+    try {
+      data = JSON.parse(ciphertext)
+    } catch {
+      throw new BDPParameterError('Invalid ciphertext.')
+    }
     if (typeof data !== 'object' || data.keyId === undefined || data.iv === undefined || data.ciphertext === undefined) {
       throw new BDPParameterError('Invalid ciphertext.')
     }
 
-    const key = this.#userOnlyKeys[data.keyId]
+    const key = this.#symmetricKeys[data.keyId]
     if (key === undefined) {
-      throw new KeyMissingError(`The key with ${data.keyId} was not found.`)
+      throw new KeyMissingError(`The key with the id ${data.keyId} was not found.`)
     }
 
     return [key, await this.#decryptAES(data, key, origin)]
   }
-  async deleteUserOnlyKey(keyId: string) {
-    delete this.#userOnlyKeys[keyId]
+  async deleteSymmetricKey(keyId: string) {
+    delete this.#symmetricKeys[keyId]
     await this.#save()
   }
 
@@ -256,7 +257,12 @@ export default class KeyStore {
     return JSON.stringify(data)
   }
   async decryptWithPasswordKey(ciphertext: string, origin: string, key?: PasswordKey, password?: string, storeKey?: boolean): Promise<[PasswordKey, string]> {
-    const data = JSON.parse(ciphertext)
+    let data: PasswordKeyCiphertextData
+    try {
+      data = JSON.parse(ciphertext)
+    } catch {
+      throw new BDPParameterError('Invalid ciphertext.')
+    }
     if (typeof data !== 'object' || data.keyId === undefined || data.iv === undefined || data.ciphertext === undefined || data.salt === undefined) {
       throw new BDPParameterError('Invalid ciphertext.')
     }
@@ -268,7 +274,7 @@ export default class KeyStore {
     if (key === undefined && password === undefined) {
       key = this.#passwordKeys[data.keyId]
       if (key === undefined) {
-        throw new KeyMissingError(`The key with ${data.keyId} was not found.`)
+        throw new KeyMissingError(`The key with the id ${data.keyId} was not found.`)
       }
     }
 
@@ -289,13 +295,6 @@ export default class KeyStore {
   async deletePasswordKey(keyId: string) {
     delete this.#passwordKeys[keyId]
     await this.#save()
-  }
-
-  getSymmetricKeys() {
-    return Object.values(this.#symmetricKeys).sort((a, b) => a.created.valueOf() - b.created.valueOf())
-  }
-  getSymmetricKeyCount(): number {
-    return Object.keys(this.#symmetricKeys).length
   }
 
   getRecipientKeys() {
@@ -321,17 +320,10 @@ export default class KeyStore {
    */
   async load() {
     const storedData = await chrome.storage.local.get([
-      'userOnlyKeys',
-      'passwordKeys',
       'symmetricKeys',
+      'passwordKeys',
       'recipientKeys',
     ])
-
-    if (storedData.userOnlyKeys !== undefined) {
-      Object.assign(this.#userOnlyKeys, await this.#deserializeValues(storedData.userOnlyKeys))
-    } else {
-      Object.keys(this.#userOnlyKeys).forEach(key => delete this.#userOnlyKeys[key])
-    }
 
     if (storedData.passwordKeys !== undefined) {
       Object.assign(this.#passwordKeys, await this.#deserializeValues(storedData.passwordKeys))
@@ -432,7 +424,6 @@ export default class KeyStore {
    */
   async #save() {
     await chrome.storage.local.set({
-      userOnlyKeys: await this.#serializeValues(toRaw(this.#userOnlyKeys)),
       passwordKeys: await this.#serializeValues(toRaw(this.#passwordKeys)),
       symmetricKeys: await this.#serializeValues(toRaw(this.#symmetricKeys)),
       recipientKeys: await this.#serializeValues(toRaw(this.#recipientKeys)),
