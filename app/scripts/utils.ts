@@ -37,6 +37,16 @@ export function bufferFromBase64(value: string): ArrayBuffer {
   return bytes.buffer
 }
 
+/**
+ * The SHA-256 hash of a key is used as the key ID.
+ * For asymmetric keys, the public key is used to derive the hash, which needs to be provided by the caller as the only parameter.
+ */
+export async function deriveKeyId(key: CryptoKey): Promise<string> {
+  const rawKey = await crypto.subtle.exportKey('raw', key)
+  const hash = await crypto.subtle.digest('SHA-256', rawKey)
+  return bufferToHex(hash)
+}
+
 export async function serializeKey(key: CryptoKey): Promise<object> {
   return {
     algorithm: key.algorithm,

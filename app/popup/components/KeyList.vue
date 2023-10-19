@@ -32,7 +32,9 @@ async function exportKey(key: SymmetricKey) {
   // create a non-stored password key as wrapping key for the export
   const wrappingKey = await props.keyStore.generatePasswordKey(exportPassword.value, '', ['*'], false)
 
-  const wrappedKey = await props.keyStore.encryptWithPasswordKey(JSON.stringify(await serializeValue(key)), wrappingKey, '')
+  const serializedKey: any = await serializeValue(key)
+  delete serializedKey.keyId
+  const wrappedKey = await props.keyStore.encryptWithPasswordKey(JSON.stringify(serializedKey), wrappingKey, '')
 
   exportedKey.value = btoa(wrappedKey)
   exportPasswordLoading.value = false

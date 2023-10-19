@@ -1,5 +1,5 @@
-import { provide, reactive, toRaw } from 'vue'
-import { bufferFromBase64, bufferToBase64, bufferToHex, deserializeValues, serializeValues } from './utils'
+import { reactive, toRaw } from 'vue'
+import { bufferFromBase64, bufferToBase64, deriveKeyId, deserializeValues, serializeValues } from './utils'
 
 export const keyTypes = [
   // [keyType, keyText, keyTextAdjective (used with the word "key" appended), keyDescription]
@@ -155,7 +155,7 @@ export default class KeyStore {
       ['encrypt', 'decrypt'],
     )
     const keyObj: SymmetricKey = {
-      keyId: await this.#deriveKeyId(key),
+      keyId: await deriveKeyId(key),
       shortDescription,
       created: new Date(),
       lastUsed: null,
@@ -239,7 +239,7 @@ export default class KeyStore {
     )
 
     const keyObj: PasswordKey = {
-      keyId: await this.#deriveKeyId(key),
+      keyId: await deriveKeyId(key),
       shortDescription,
       created: new Date(),
       lastUsed: null,
@@ -319,17 +319,6 @@ export default class KeyStore {
   getRecipientKeyCount(): number {
     return Object.keys(this.#recipientKeys).length
   }
-
-  /**
-   * The SHA-256 hash of a key is used as the key ID.
-   * For asymmetric keys, the public key is used to derive the hash, which needs to be provided by the caller as the only parameter.
-   */
-  async #deriveKeyId(key: CryptoKey): Promise<string> {
-    const rawKey = await crypto.subtle.exportKey('raw', key)
-    const hash = await crypto.subtle.digest('SHA-256', rawKey)
-    return bufferToHex(hash)
-  }
-
 
   /**
    * Load data from storage.

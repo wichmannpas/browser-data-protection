@@ -3,7 +3,7 @@ import { Ref, computed, onBeforeMount, reactive, ref, watch } from 'vue'
 import KeyStore, { BDPParameterError, PasswordKey, SymmetricKey, keyTypes } from '../../scripts/KeyStore';
 import KeyList from '../components/KeyList.vue';
 import { createKeyFor, createKeyForDistributionMode } from '../../scripts/popupAppState';
-import { deserializeValue } from '../../scripts/utils';
+import { deriveKeyId, deserializeValue } from '../../scripts/utils';
 
 const ready = ref(false)
 
@@ -82,6 +82,7 @@ async function importKey(keyType: string) {
         // reset usage data
         unwrappedKey.lastUsed = null
         unwrappedKey.previouslyUsedOnOrigins = []
+        unwrappedKey.keyId = await deriveKeyId(unwrappedKey.key)
 
         // store unwrapped key
         if (!await keyStore.addSymmetricKey(unwrappedKey as SymmetricKey)) {
