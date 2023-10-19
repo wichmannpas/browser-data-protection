@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Ref, computed, onBeforeMount, ref, watch } from 'vue'
-import InternalProtectedField from '../../scripts/InternalProtectedField'
-import KeyStore, { BDPParameterError, KeyMissingError, PasswordKey, StoredKey, SymmetricKey, keyTypes } from '../../scripts/KeyStore';
-import { activeView, createKeyFor, createKeyForDistributionMode } from '../../scripts/popupAppState';
 import zxcvbn from 'zxcvbn'
-import { ProtectedFieldOptions } from '../../scripts/ProtectedFieldOptions';
+import PasswordStrength from './PasswordStrength.vue'
+import InternalProtectedField from '../../scripts/InternalProtectedField'
+import KeyStore, { BDPParameterError, KeyMissingError, PasswordKey, StoredKey, SymmetricKey, keyTypes } from '../../scripts/KeyStore'
+import { activeView, createKeyFor, createKeyForDistributionMode } from '../../scripts/popupAppState'
+import { ProtectedFieldOptions } from '../../scripts/ProtectedFieldOptions'
 
 const props = defineProps({
   field: {
@@ -41,9 +42,7 @@ const usedKey: Ref<StoredKey | null> = ref(null)
 
 const chosenPassword = ref('')
 const chosenPasswordStoreKey = ref(true)
-const passwordStrength = computed(() => {
-  return zxcvbn(chosenPassword.value)
-})
+const passwordStrength = computed(() => zxcvbn(chosenPassword.value))
 async function choosePassword() {
   if (chosenPassword.value === '') {
     return
@@ -252,22 +251,6 @@ function clearField() {
                 </div>
               </label>
 
-              <div class="bar bar-sm" :style="'background: ' + (passwordStrength.score < 1 ? 'red' : 'white') + ';'">
-                <div class="bar-item" role="progressbar"
-                  :style="'width: ' + passwordStrength.score * 25 + '%; background: ' + (passwordStrength.score > 3 ? 'green' : passwordStrength.score > 1 ? 'orange' : 'red') + ';'"
-                  :aria-valuenow="passwordStrength.score" aria-valuemin="0" aria-valuemax="4"></div>
-              </div>
-              Password strength: {{ passwordStrength.score }}/4
-              <div v-if="passwordStrength.feedback.warning" class="toast toast-warning">
-                {{ passwordStrength.feedback.warning }}
-              </div>
-              <div v-for="suggestion in passwordStrength.feedback.suggestions">
-                {{ suggestion }}
-              </div>
-              <div>
-                Expected time to crack:
-                {{ passwordStrength.crack_times_display.offline_slow_hashing_1e4_per_second }}
-              </div>
 
               <div class="form-group">
                 <label class="form-switch">
@@ -297,17 +280,17 @@ function clearField() {
                 </div>
               </label>
 
+              <PasswordStrength :passwordStrength="passwordStrength" />
+
               <div class="form-group">
                 <label class="form-switch">
                   <input type="checkbox" v-model="chosenPasswordStoreKey">
                   <i class="form-icon"></i> Store the key derived from this password. The password itself is never stored.
                 </label>
               </div>
-
               <div class="toast toast-error" v-if="passwordReRequestError !== null">
                 {{ passwordReRequestError }}
               </div>
-
               <button type="submit" class="btn btn-block btn-primary" :disabled="reRequestedPassword === ''">
                 Check password
               </button>
@@ -325,7 +308,7 @@ function clearField() {
             </p>
             <table class="table table-striped table-hover">
               <tbody>
-                <tr v-for="key in selectableKeys"
+                <tr v-for="key in selectableKeys" @click="usedKey = key" class="c-hand"
                   :class="{ 'previous-key': previouslyUsedKey !== null && key.keyId === previouslyUsedKey.keyId }">
                   <td class="previous-key-star">
                     <template v-if="previouslyUsedKey !== null && key.keyId === previouslyUsedKey.keyId">
@@ -337,7 +320,7 @@ function clearField() {
                   <td class="key-id">{{ key.keyId }}</td>
                   <td>{{ key.shortDescription }}</td>
                   <td>
-                    <button @click="usedKey = key" class="btn btn-link tooltip tooltip-left"
+                    <button @click="usedKey = key; $event.stopPropagation()" class="btn btn-link tooltip tooltip-left"
                       data-tooltip="Use this key for the field's value">
                       <i class="fa-solid fa-check"></i>
                     </button>

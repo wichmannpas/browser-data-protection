@@ -36,3 +36,88 @@ export function bufferFromBase64(value: string): ArrayBuffer {
   }
   return bytes.buffer
 }
+
+export async function serializeKey(key: CryptoKey): Promise<object> {
+  return {
+    algorithm: key.algorithm,
+    keyData: await crypto.subtle.exportKey('jwk', key)
+  }
+}
+
+export async function deserializeKey(value: { keyData: JsonWebKey, algorithm: AlgorithmIdentifier }): Promise<CryptoKey> {
+  return await crypto.subtle.importKey('jwk', value.keyData, value.algorithm, true, ['encrypt', 'decrypt'])
+}
+
+export async function serializeValue(value: object): Promise<object> {
+  const result = Object.create(null)
+  Object.assign(result, value)
+
+  // Date
+  if (result.created !== undefined) {
+    result.created = result.created.valueOf()
+  }
+  if (result.lastUsed !== undefined && result.lastUsed !== null) {
+    result.lastUsed = result.lastUsed.valueOf()
+  }
+
+  // CryptoKey
+  if ('key' in result) {
+    result.key = await serializeKey(result.key)
+  }
+  if ('privateKey' in result) {
+    result.privateKey = await serializeKey(result.privateKey)
+  }
+  if ('publicKey' in result) {
+    result.publicKey = await serializeKey(result.publicKey)
+  }
+
+  return result
+}
+
+export async function deserializeValue(value: object): Promise<object> {
+  const result = Object.create(null)
+  Object.assign(result, value)
+
+  // Date
+  if (result.created !== undefined) {
+    result.created = new Date(result.created)
+  }
+  if (result.lastUsed !== undefined && result.lastUsed !== null) {
+    result.lastUsed = new Date(result.lastUsed)
+  }
+
+  // CryptoKey
+  if ('key' in result) {
+    result.key = await deserializeKey(result.key)
+  }
+  if ('privateKey' in result) {
+    result.privateKey = await deserializeKey(result.privateKey)
+  }
+  if ('publicKey' in result) {
+    result.publicKey = await deserializeKey(result.publicKey)
+  }
+
+  return result
+}
+
+export async function serializeValues(value: object): Promise<object> {
+  const result = Object.create(null)
+  Object.assign(result, value)
+  const keys = Object.keys(value)
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]
+    result[key] = await serializeValue(value[key])
+  }
+  return result
+}
+
+export async function deserializeValues(value: object): Promise<object> {
+  const result = Object.create(null)
+  Object.assign(result, value)
+  const keys = Object.keys(value)
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]
+    result[key] = await deserializeValue(value[key])
+  }
+  return result
+}

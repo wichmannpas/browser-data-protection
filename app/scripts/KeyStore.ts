@@ -1,5 +1,5 @@
 import { provide, reactive, toRaw } from 'vue'
-import { bufferFromBase64, bufferToBase64, bufferToHex } from './utils'
+import { bufferFromBase64, bufferToBase64, bufferToHex, deserializeValues, serializeValues } from './utils'
 
 export const keyTypes = [
   // [keyType, keyText, keyTextAdjective (used with the word "key" appended), keyDescription]
@@ -133,6 +133,18 @@ export default class KeyStore {
   getSymmetricKeyCount(): number {
     return Object.keys(this.#symmetricKeys).length
   }
+  /**
+   * Adds a symmetric key to the key store unless it already exists.
+   * @returns Whether the key was added or not (i.e., it existed already).
+   */
+  async addSymmetricKey(key: SymmetricKey): Promise<boolean> {
+    if (this.#symmetricKeys[key.keyId] !== undefined) {
+      return false
+    }
+    this.#symmetricKeys[key.keyId] = key
+    await this.#save()
+    return true
+  }
   async generateSymmetricKey(shortDescription: string, allowedOrigins: string[], distributionMode: SymmetricKey['distributionMode']): Promise<SymmetricKey> {
     const key = await crypto.subtle.generateKey(
       {
@@ -256,6 +268,10 @@ export default class KeyStore {
     data.salt = key.salt
     return JSON.stringify(data)
   }
+  /**
+   * Decrypt a ciphertext with a password key. If no key is provided, the keyId of the ciphertext is used to look up the key.
+   * Alternatively, it is possible to specify the password to automatically re-generate the required password key.
+   */
   async decryptWithPasswordKey(ciphertext: string, origin: string, key?: PasswordKey, password?: string, storeKey?: boolean): Promise<[PasswordKey, string]> {
     let data: PasswordKeyCiphertextData
     try {
@@ -326,97 +342,22 @@ export default class KeyStore {
     ])
 
     if (storedData.passwordKeys !== undefined) {
-      Object.assign(this.#passwordKeys, await this.#deserializeValues(storedData.passwordKeys))
+      Object.assign(this.#passwordKeys, await deserializeValues(storedData.passwordKeys))
     } else {
       Object.keys(this.#passwordKeys).forEach(key => delete this.#passwordKeys[key])
     }
 
     if (storedData.symmetricKeys !== undefined) {
-      Object.assign(this.#symmetricKeys, await this.#deserializeValues(storedData.symmetricKeys))
+      Object.assign(this.#symmetricKeys, await deserializeValues(storedData.symmetricKeys))
     } else {
       Object.keys(this.#symmetricKeys).forEach(key => delete this.#symmetricKeys[key])
     }
 
     if (storedData.recipientKeys !== undefined) {
-      Object.assign(this.#recipientKeys, await this.#deserializeValues(storedData.recipientKeys))
+      Object.assign(this.#recipientKeys, await deserializeValues(storedData.recipientKeys))
     } else {
       Object.keys(this.#recipientKeys).forEach(key => delete this.#recipientKeys[key])
     }
-  }
-
-  async #serializeKey(key: CryptoKey): Promise<object> {
-    return {
-      algorithm: key.algorithm,
-      keyData: await crypto.subtle.exportKey('jwk', key)
-    }
-  }
-  async #serializeValues(value: object): Promise<object> {
-    const result = Object.create(null)
-    Object.assign(result, value)
-    const keys = Object.keys(value)
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i]
-      const newElem = Object.create(null)
-      Object.assign(newElem, value[key])
-
-      // Date
-      if (newElem.created !== undefined) {
-        newElem.created = newElem.created.valueOf()
-      }
-      if (newElem.lastUsed !== undefined && newElem.lastUsed !== null) {
-        newElem.lastUsed = newElem.lastUsed.valueOf()
-      }
-
-      // CryptoKey
-      if ('key' in newElem) {
-        newElem.key = await this.#serializeKey(newElem.key)
-      }
-      if ('privateKey' in newElem) {
-        newElem.privateKey = await this.#serializeKey(newElem.privateKey)
-      }
-      if ('publicKey' in newElem) {
-        newElem.publicKey = await this.#serializeKey(newElem.publicKey)
-      }
-
-      result[key] = newElem
-    }
-    return result
-  }
-
-  async #deserializeKey(value: { keyData: JsonWebKey, algorithm: AlgorithmIdentifier }): Promise<CryptoKey> {
-    return await crypto.subtle.importKey('jwk', value.keyData, value.algorithm, true, ['encrypt', 'decrypt'])
-  }
-  async #deserializeValues(value: object): Promise<object> {
-    const result = Object.create(null)
-    Object.assign(result, value)
-    const keys = Object.keys(value)
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i]
-      const newElem = Object.create(null)
-      Object.assign(newElem, value[key])
-
-      // Date
-      if (newElem.created !== undefined) {
-        newElem.created = new Date(newElem.created)
-      }
-      if (newElem.lastUsed !== undefined && newElem.lastUsed !== null) {
-        newElem.lastUsed = new Date(newElem.lastUsed)
-      }
-
-      // CryptoKey
-      if ('key' in newElem) {
-        newElem.key = await this.#deserializeKey(newElem.key)
-      }
-      if ('privateKey' in newElem) {
-        newElem.privateKey = await this.#deserializeKey(newElem.privateKey)
-      }
-      if ('publicKey' in newElem) {
-        newElem.publicKey = await this.#deserializeKey(newElem.publicKey)
-      }
-
-      result[key] = newElem
-    }
-    return result
   }
 
   /**
@@ -424,9 +365,9 @@ export default class KeyStore {
    */
   async #save() {
     await chrome.storage.local.set({
-      passwordKeys: await this.#serializeValues(toRaw(this.#passwordKeys)),
-      symmetricKeys: await this.#serializeValues(toRaw(this.#symmetricKeys)),
-      recipientKeys: await this.#serializeValues(toRaw(this.#recipientKeys)),
+      passwordKeys: await serializeValues(toRaw(this.#passwordKeys)),
+      symmetricKeys: await serializeValues(toRaw(this.#symmetricKeys)),
+      recipientKeys: await serializeValues(toRaw(this.#recipientKeys)),
     })
   }
 }

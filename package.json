@@ -7,7 +7,8 @@
     "build": "webextension-toolbox build"
   },
   "dependencies": {
-    "@webextension-toolbox/webextension-toolbox": "^6.1.0"
+    "@webextension-toolbox/webextension-toolbox": "^6.1.0",
+    "spectre.css": "^0.5.9"
   },
   "devDependencies": {
     "@fortawesome/fontawesome-free": "^6.4.2",

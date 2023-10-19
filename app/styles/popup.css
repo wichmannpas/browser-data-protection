@@ -1,5 +1,9 @@
-.key-id {
-  font-family: monospace;
+.monospace {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.key-id, .exported-key {
+  font-family: 'Courier New', Courier, monospace;
 }
 
 td.key-id {

@@ -10,13 +10,13 @@
   <h1>BrowserDataProtection Demo Page</h1>
 
   <div>
-    <strong>Field 1: User-only, immediate</strong>
+    <strong>Field 1: symmetric, user-only, immediate</strong>
     <div id="field1"></div>
     <code id="ciphertextField1"></code>
   </div>
 
   <div>
-    <strong>Field 2: User-only, on-submit</strong>
+    <strong>Field 2: symmetric, user-only, on-submit</strong>
     <div id="field2"></div>
   </div>
 
@@ -24,6 +24,14 @@
     <strong>Field 3: Password key</strong>
     <div id="field3"></div>
     <code id="ciphertextField3"></code>
+  </div>
+
+  <div>
+    <strong>Field 4: symmetric, external, immediate</strong>
+    <div id="field4"></div>
+    <code id="ciphertextField4"></code>
+    Exported key (password: "f")
+    <textarea readonly rows="6" cols="200">eyJrZXlJZCI6IjQ3ZTdlZDAzM2UxODlhMWYzYTYyYjFkOGFhMjI4NTNmIiwiaXYiOiJsYXBVV2pqWGlvekdYUVh0IiwiY2lwaGVydGV4dCI6InZnZGx4UXQ1QTdzODhmd3dHYlEzMnc4U3gxcGNaWXZ2VDd5VXpuZGN1SnNabXoxQTVVc0dRQnVVNEZIR2U3aDQ3aFh5Zjg3TDBxT1JsT1h5Y2NIUkxTd2pUTFFpZ3QyZFNzOVRxZ2VOZE1HdnJ1UXVpR0lGZHM1UmswakJmZjJZMXE2STIydmpJK1pIQjllRVhUNEEwOUpvWXJtZFpPUTc2bElBZ3lYc3RYSWNGWEdLVjczSEJ3KzVsTkxoQWpQQ0lkd3ZIUExBTnBVVSt6djFXNkpuY1JDcUdqWTBaT1FBdTRGbS8xa0dDT0pFaGNYSGE4N0tNMllVUTRJTmRaT3dJRkxqS0tkTHBMVnkrYllqNWI1UUk0RjVSTllGQnVRcjFWWVJNNnhWRFJEWU83d29zSm15SkNndWVmV280UUl5c2F3OWVXYkhlbnVScGVjb1l0UWNRbDJxQ3hDTEpTeGNqSkdZU0IvUmQvN3hQYlc4SzI0ZkpiNHBKNGF5VlY4bGttN3Byc0F2VHlsMEdWMFg4TUd3aFhkd3RQWXMycmlsMkRRcGZMUlZNREFDSmVWMlV5RzhrZG1sTkZwbTNEc2lJSnBWeXRHVDVDT0krcWNrN3d0eXEyeVVPbFU5enE4cjVhYVVySTBpZDNJWHB2MXk1em9ON3lISngwa0V0VUtqcEN4VTAzMkFtVkhXQlA0WGlhM0NYanM0Yi96VlZGUzlvMnQvdFh6MjZHd0pyb1A3THRmNFl0MD0iLCJzYWx0IjoiT3hFc2RjaUxUZG9JcTVtVFRGN3JhWmhUMllJSU9hSUlpbllZQTg4SyJ9</textarea>
   </div>
 
   <p>
@@ -76,7 +84,20 @@
       cryptoField3.setCiphertext('{"keyId":"81f06e43e9acdf47b0db0edefd2e903f","iv":"a/jMS4UnWiccKK7o","ciphertext":"ASq3UMIUwE5/pOKlC8T65h7r/xI=","salt":"qrnmFOnTTbmvQ+Tt5xEKTuXwIxUmDE/58HPXhZmf"}')
       console.log(cryptoField3)
 
-      setTimeout(() => field1.click(), 50)
+      const ciphertextField4 = document.getElementById('ciphertextField4')
+      const field4 = document.getElementById('field4')
+      const cryptoField4 = await window.browserDataProtection.createProtectedField(field4, {
+        protectionMode: 'symmetric',
+        distributionMode: 'external',
+        updateMode: 'immediate',
+        ciphertextChangedCallback (ciphertext) {
+          ciphertextField4.innerText = ciphertext
+        }
+      })
+      cryptoField4.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b652e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
+      console.log(cryptoField4)
+
+      setTimeout(() => field4.click(), 50)
     })();
   </script>
 </body>

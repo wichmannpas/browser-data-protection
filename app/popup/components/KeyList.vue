@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { PropType, Ref, ref } from 'vue'
-import KeyStore, { RecipientKey, StoredKey, isPasswordKey, isRecipientKey } from '../../scripts/KeyStore';
+import { PropType, Ref, computed, ref, watch } from 'vue'
+import KeyStore, { RecipientKey, StoredKey, SymmetricKey, isPasswordKey, isRecipientKey } from '../../scripts/KeyStore';
+import zxcvbn from 'zxcvbn';
+import PasswordStrength from './PasswordStrength.vue';
+import { serializeValue } from '../../scripts/utils';
 
 const props = defineProps({
   keyType: {
@@ -19,6 +22,28 @@ const props = defineProps({
 
 const showDetailsForKey: Ref<null | string> = ref(null)
 
+const exportPassword = ref('')
+const exportPasswordStrength = computed(() => zxcvbn(exportPassword.value))
+const exportPasswordLoading = ref(false)
+const exportedKey: Ref<null | string> = ref(null)
+async function exportKey(key: SymmetricKey) {
+  exportPasswordLoading.value = true
+
+  // create a non-stored password key as wrapping key for the export
+  const wrappingKey = await props.keyStore.generatePasswordKey(exportPassword.value, '', ['*'], false)
+
+  const wrappedKey = await props.keyStore.encryptWithPasswordKey(JSON.stringify(await serializeValue(key)), wrappingKey, '')
+
+  exportedKey.value = btoa(wrappedKey)
+  exportPasswordLoading.value = false
+}
+
+watch(() => showDetailsForKey.value, () => {
+  exportPassword.value = ''
+  exportPasswordLoading.value = false
+  exportedKey.value = null
+})
+
 function deleteKey(key: StoredKey | RecipientKey) {
   if (isPasswordKey(key)) {
     if (!confirm(`Do you really want to permanently delete the key with the id ${key.keyId}? You will not be able to view or update any values that use this key. If you still know the corresponding password, you will be able to restore this key when presented with a ciphertext that was encrypted with this key.`)) {
@@ -36,7 +61,7 @@ function deleteKey(key: StoredKey | RecipientKey) {
   }
 
   switch (props.keyType) {
-    case 'user-only':
+    case 'symmetric':
       props.keyStore.deleteSymmetricKey(key.keyId)
       break
     case 'password':
@@ -58,6 +83,9 @@ function deleteKey(key: StoredKey | RecipientKey) {
           <th>
             Key id
           </th>
+          <th v-if="keyType === 'symmetric'">
+            Distr. mode
+          </th>
           <th>
             Desc.
           </th>
@@ -71,18 +99,21 @@ function deleteKey(key: StoredKey | RecipientKey) {
       </thead>
       <tbody>
         <template v-for="key in props.keys">
-          <tr>
+          <tr @click="showDetailsForKey = key.keyId" class="c-hand">
             <td>
               <button class="btn btn-link btn-sm tooltip tooltip-right" data-tooltip="Show details"
-                @click="showDetailsForKey = key.keyId" v-if="showDetailsForKey !== key.keyId">
+                @click="showDetailsForKey = key.keyId; $event.stopPropagation()" v-if="showDetailsForKey !== key.keyId">
                 <i class="fa-solid fa-magnifying-glass"></i>
               </button>
               <button class="btn btn-link btn-sm tooltip tooltip-right" data-tooltip="Close details"
-                @click="showDetailsForKey = null" v-if="showDetailsForKey === key.keyId">
+                @click="showDetailsForKey = null; $event.stopPropagation()" v-if="showDetailsForKey === key.keyId">
                 <i class="fa-solid fa-xmark"></i>
               </button>
             </td>
             <td class="key-id">{{ key.keyId }}</td>
+            <td v-if="keyType === 'symmetric'">
+              {{ (key as SymmetricKey).distributionMode }}
+            </td>
             <td>
               {{ key.shortDescription }}
             </td>
@@ -103,7 +134,7 @@ function deleteKey(key: StoredKey | RecipientKey) {
           <template v-if="showDetailsForKey === key.keyId">
             <!-- even number of additional rows so the striping of further rows does not get affected -->
             <tr>
-              <td colspan="5">
+              <td colspan="6">
                 <span class="key-detail-head">
                   Key <span class="key-id">{{ key.keyId }}</span>
                 </span>
@@ -123,13 +154,44 @@ function deleteKey(key: StoredKey | RecipientKey) {
                 <strong>Created:</strong>
                 {{ key.created.toLocaleDateString() }}
                 {{ key.created.toLocaleTimeString() }}
-                <div v-if="keyType === 'symmetric'">
-                  <strong>Export Key</strong>
-                </div>
+                <hr />
+                <form
+                  v-if="keyType === 'symmetric' && ['user-only', 'external'].includes((key as SymmetricKey).distributionMode)"
+                  @submit.prevent="exportKey(key as SymmetricKey)">
+                  <div class="accordion">
+                    <input type="checkbox" id="accordion-1" name="accordion-checkbox" hidden>
+                    <label class="accordion-header" for="accordion-1">
+                      <i class="icon icon-arrow-right mr-1"></i>
+                      <strong>Export key</strong>
+                    </label>
+                    <div class="accordion-body">
+                      When you export the key, you receive a
+                      <div v-if="(key as SymmetricKey).distributionMode === 'user-only'" class="toast toast-warning">
+                        This is <strong>your personal key</strong> and must not be shared with other users.
+                        Only share this key with your other browsers and devices.
+                        <strong>Never provide the exported key or the password you choose for the export to
+                          anybody.</strong>
+                      </div>
+                      <label class="form-label">
+                        Export password
+                        <input type="password" class="form-input" v-model="exportPassword"
+                          :disabled="exportPasswordLoading"
+                          placeholder="This password needs to be entered to import this key." />
+                      </label>
+                      <PasswordStrength :passwordStrength="exportPasswordStrength" />
+                      <button type="submit" class="btn btn-primary btn-block" :class="{ loading: exportPasswordLoading }"
+                        :disabled="exportPasswordLoading">Export key</button>
+                      <div v-if="exportedKey !== null" class="exported-key-div">
+                        <strong>Exported key:</strong>
+                        <textarea v-model="exportedKey" readonly class="form-input" rows="4"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </form>
               </td>
             </tr>
             <tr>
-              <td colspan="5">
+              <td colspan="6">
                 <button class="btn btn-sm btn-error" @click="deleteKey(key)">
                   <i class="fa-solid fa-trash"></i>
                   Permanently delete this key
@@ -144,14 +206,13 @@ function deleteKey(key: StoredKey | RecipientKey) {
 </template>
 
 <style scoped>
-.key-list {
-  overflow-y: auto;
-  max-height: 20em;
-}
-
 .key-detail-head {
   font-weight: bold;
   font-size: 1.1em;
   display: block;
+}
+
+.exported-key-div>textarea {
+  font-family: monospace;
 }
 </style>

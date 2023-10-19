@@ -1,5 +1,5 @@
 export interface ProtectedFieldOptions {
-  protectionMode: 'user-only' | 'password' | 'symmetric' | 'recipient'
+  protectionMode: 'symmetric' | 'password' | 'recipient'
   distributionMode?: 'local' | 'direct-plain' | 'direct-wrapped' | 'external' | 'key-agreement'
   readOnly: boolean
   updateMode: 'immediate' | 'on-submit'
