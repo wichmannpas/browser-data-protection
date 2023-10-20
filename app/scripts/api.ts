@@ -25,11 +25,6 @@ import { ProtectedFieldOptions } from "./ProtectedFieldOptions";
         mode: 'direct-plain',
         protectionModes: ['recipient'],
       },
-      // direct-wrapped does not support symmetric mode, as this would be equivalent to the protection mode password
-      {
-        mode: 'direct-wrapped',
-        protectionModes: ['recipient'],
-      },
       {
         mode: 'key-agreement',
         protectionModes: ['symmetric'],

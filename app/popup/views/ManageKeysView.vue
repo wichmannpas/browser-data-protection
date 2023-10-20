@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Ref, computed, onBeforeMount, reactive, ref, watch } from 'vue'
-import KeyStore, { BDPParameterError, PasswordKey, SymmetricKey, keyTypes } from '../../scripts/KeyStore';
+import KeyStore, { BDPParameterError, SymmetricKey, keyTypes } from '../../scripts/KeyStore';
 import KeyList from '../components/KeyList.vue';
 import { createKeyFor, createKeyForDistributionMode } from '../../scripts/popupAppState';
 import { deriveKeyId, deserializeValue } from '../../scripts/utils';
@@ -180,7 +180,6 @@ onBeforeMount(() => {
                 v-model="generateNewKeyData.distributionMode">
                 <option value="user-only">User only</option>
                 <option value="external">External</option>
-                <option value="key-agreement">Key agreement</option>
               </select>
             </label>
             <label class="form-label">

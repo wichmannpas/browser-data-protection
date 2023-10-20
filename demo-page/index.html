@@ -34,6 +34,12 @@
     <textarea readonly rows="6" cols="200">eyJrZXlJZCI6ImZhMWM3M2E4ODY2ZGNmZDljY2ZiYWExMmIwNWNkZmRmIiwiaXYiOiIwMWRrd2tWQ3ZNZ2t2S3ZxIiwiY2lwaGVydGV4dCI6IjBCaEJDMjRnSjlvQmxablRFaEVRNnZTUXBidXV5TWJvcmduNzFKOFhVOGxkTk5QN1lCc0RzeXU0bXlNeWhwRDdFc0I1R1NGdnBEdC9JY3Y5UkRDU1FjWVhzNSs0b0VhU0YyR0owanAyOGRyMlFyQ2hpM29qamc1all2ODQwbHg4WWxoVDRlckVkZUtmd1dxcjJlTzQxOVd3ODRTbDFFMlJ5Vk9aejlPdE5kSS94TFdteENXbktSb3VCNXpXdnJ6UVk1TXJoSFFSWHY2bC9EZmJmVGhUTUZ3a3AydGd1YUo1eG95Zk5vNm1hZHhJbFppWDIvZVZpOVNIbmNobzdwVkhLNGROMy8wcU1LZzBkTGVpQXBVbktpMzY3akg4NGRkaHdpQU9kTDY3YzFsMmVzNTB0by9kRTBYL2JhR3BIZ3VUVURuR2ozeVZORjBydFNWQ3hTa0tUNktBZFdsa0tudGxJbUhwbzA2cHhqdWlkSzVQS21tTm9WRmZPdG9MQjJNa2pMckVHQ3M0YUI1a1R1M3ZpVy9acEJxa2toU3JwYTUvVVVFaTRyTUUrdU4zMzNxd0oxZm5wYU9NNXNaVjY3UTdYSFV3bUdoTkxNUUdhUnNzN3dFPSIsInNhbHQiOiI3bzlsTXVaUG1BRGE1WjBHSUFTZzVwYWVUZlFBSDRVcmhjdDVRajZpIn0=</textarea>
   </div>
 
+  <div>
+    <strong>Field 5: symmetric, key agreement, immediate</strong>
+    <div id="field5"></div>
+    <code id="ciphertextField5"></code>
+  </div>
+
   <p>
     <a href="empty.html">Page without fields</a>
   </p>
@@ -97,7 +103,20 @@
       cryptoField4.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b652e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
       console.log(cryptoField4)
 
-      setTimeout(() => field4.click(), 50)
+      const ciphertextField5 = document.getElementById('ciphertextField5')
+      const field5 = document.getElementById('field5')
+      const cryptoField5 = await window.browserDataProtection.createProtectedField(field5, {
+        protectionMode: 'symmetric',
+        distributionMode: 'key-agreement',
+        updateMode: 'immediate',
+        ciphertextChangedCallback (ciphertext) {
+          ciphertextField5.innerText = ciphertext
+        }
+      })
+      // cryptoField5.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b652e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
+      console.log(cryptoField5)
+
+      setTimeout(() => field5.click(), 50)
     })();
   </script>
 </body>

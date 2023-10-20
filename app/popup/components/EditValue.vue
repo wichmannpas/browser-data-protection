@@ -3,9 +3,9 @@ import { Ref, computed, onBeforeMount, ref, watch } from 'vue'
 import zxcvbn from 'zxcvbn'
 import PasswordStrength from './PasswordStrength.vue'
 import InternalProtectedField from '../../scripts/InternalProtectedField'
-import KeyStore, { BDPParameterError, KeyMissingError, PasswordKey, StoredKey, SymmetricKey, keyTypes } from '../../scripts/KeyStore'
-import { activeView, createKeyFor, createKeyForDistributionMode } from '../../scripts/popupAppState'
-import { ProtectedFieldOptions } from '../../scripts/ProtectedFieldOptions'
+import KeyStore, { BDPParameterError, KeyMissingError, StoredKey, keyTypes } from '../../scripts/KeyStore'
+import { activeView, previouslyUsedKey, usedKey } from '../../scripts/popupAppState'
+import KeySelection from './KeySelection.vue'
 
 const props = defineProps({
   field: {
@@ -36,9 +36,6 @@ const ciphertextWaiting = ref(false)
 const keyStore = KeyStore.getKeyStore()
 
 const plaintextValue = ref('')
-
-const previouslyUsedKey: Ref<StoredKey | null> = ref(null)
-const usedKey: Ref<StoredKey | null> = ref(null)
 
 const chosenPassword = ref('')
 const chosenPasswordStoreKey = ref(true)
@@ -158,21 +155,6 @@ async function loadCiphertext() {
 onBeforeMount(loadCiphertext)
 watch(() => props.field.ciphertextValue, loadCiphertext)
 
-const selectableKeys = computed(() => {
-  switch (props.field.options.protectionMode) {
-    case 'symmetric':
-      return keyStore.getSymmetricKeysForOrigin(props.field.origin, props.field.options.distributionMode as SymmetricKey['distributionMode'])
-    case 'password':
-      return keyStore.getPasswordKeysForOrigin(props.field.origin)
-    default:
-      throw new Error('unsupported protection mode')
-  }
-})
-function navigateToCreateKey() {
-  activeView.value = 'manage-keys'
-  createKeyFor.value = props.field.options.protectionMode
-  createKeyForDistributionMode.value = props.field.options.distributionMode as ProtectedFieldOptions['distributionMode']
-}
 
 async function handleNewValue(value: string, key: StoredKey) {
   ciphertextLoading.value = true
@@ -235,7 +217,6 @@ function clearField() {
     <strong>Current origin:</strong>
     {{ field.origin }}
 
-
     <div v-if="errorMessage === null">
       <div v-if="usedKey === null">
         <template v-if="field.options.protectionMode === 'password'">
@@ -297,43 +278,7 @@ function clearField() {
             </form>
           </template>
         </template>
-        <template v-else>
-          <template v-if="selectableKeys.length > 0">
-            <p>
-              This field does not have a value.
-              <strong>
-                Choose the key to use for this field.
-              </strong>
-              You can manage your keys in the <a href="#" @click="activeView = 'manage-keys'">key manager</a>.
-            </p>
-            <table class="table table-striped table-hover">
-              <tbody>
-                <tr v-for="key in selectableKeys" @click="usedKey = key" class="c-hand"
-                  :class="{ 'previous-key': previouslyUsedKey !== null && key.keyId === previouslyUsedKey.keyId }">
-                  <td class="previous-key-star">
-                    <template v-if="previouslyUsedKey !== null && key.keyId === previouslyUsedKey.keyId">
-                      <span class="tooltip tooltip-right" data-tooltip="This key was used for the previous value.">
-                        <i class="fa-solid fa-star"></i>
-                      </span>
-                    </template>
-                  </td>
-                  <td class="key-id">{{ key.keyId }}</td>
-                  <td>{{ key.shortDescription }}</td>
-                  <td>
-                    <button @click="usedKey = key; $event.stopPropagation()" class="btn btn-link tooltip tooltip-left"
-                      data-tooltip="Use this key for the field's value">
-                      <i class="fa-solid fa-check"></i>
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </template>
-          <p v-else>
-            No suitable key available.
-            You can create a new key using the <a href="#" @click="navigateToCreateKey">key manager</a>.
-          </p>
-        </template>
+        <KeySelection :field="field" :keyStore="keyStore" v-else />
       </div>
       <form v-else @submit.prevent="finishEditing">
         <p>
@@ -395,6 +340,8 @@ function clearField() {
     <div v-else class="toast toast-error">
       <strong v-if="!errorKeyMissing">The web application provided an invalid ciphertext.</strong>
       {{ errorMessage }}
+      If the key was shared with you, you can import the key in the <a href="#" @click="activeView = 'manage-keys'">key
+        manager</a>.
     </div>
   </div>
   <div v-else class="loading loading-lg"></div>
