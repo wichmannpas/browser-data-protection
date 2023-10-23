@@ -102,10 +102,14 @@ chrome.runtime.onMessage.addListener(function (message: any, sender: chrome.runt
       // message is from popup/internal page
       switch (message.operation) {
         case 'getTabState':
-          sendResponse(state.getStateForTab(state.activeTabId))
+          sendResponse(await state.getSerializedStateForTab(state.activeTabId))
           break
         case 'updateCiphertext':
           state.updateFieldCiphertext(message.tabId, message.fieldId, message.ciphertextValue)
+          await setState(state)
+          break
+        case 'updateOwnPublicKeyId':
+          await state.updateFieldPublicKeyData(message.tabId, message.fieldId, undefined, message.ownPublicKeyId)
           await setState(state)
           break
         case 'stopEdit':
@@ -137,6 +141,19 @@ chrome.runtime.onMessage.addListener(function (message: any, sender: chrome.runt
             operation: 'updateCiphertextPopup',
             fieldId: message.internalProtectedField.fieldId,
             ciphertextValue: message.ciphertextValue,
+          })
+          break
+
+        case 'setPublicKeyData':
+          await state.updateFieldPublicKeyData(sender.tab.id, message.internalProtectedField.fieldId, message.othersPublicKey, message.ownPublicKeyId)
+          await setState(state)
+          // propagate change to browser action popup
+          chrome.runtime.sendMessage({
+            context: 'bdp',
+            operation: 'updatePublicKeyData',
+            fieldId: message.internalProtectedField.fieldId,
+            othersPublicKey: message.othersPublicKey,
+            ownPublicKeyId: message.ownPublicKeyId,
           })
           break
 

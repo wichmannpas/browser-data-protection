@@ -14,7 +14,7 @@ const props = defineProps({
   keyStore: {
     type: Object as PropType<KeyStore>,
     required: true
-  }
+  },
 })
 
 const selectableKeys = computed(() => {
@@ -68,9 +68,9 @@ function navigateToCreateKey() {
     </table>
   </div>
   <p v-else>
-    No suitable key available.
-    <KeyAgreement v-if="field.options.distributionMode === 'key-agreement'" :field="field" />
+    <KeyAgreement v-if="field.options.distributionMode === 'key-agreement'" :field="field" :key-store="keyStore" />
     <template v-else>
+      No suitable key available.
       You can create a new key using the <a href="#" @click="navigateToCreateKey">key manager</a>.
     </template>
   </p>

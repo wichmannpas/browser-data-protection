@@ -8,5 +8,5 @@ export interface ProtectedFieldOptions {
   ciphertextChangedCallback?: (ciphertext: string | null) => void
 
   // A callback that is executed when a public key is provided to be used with this field. This is applicable for symmetric protection in the key-agreement distribution mode and for recipient protection in the direct-plain distribution mode.
-  publicKeyProvidedCallback?: (publicKey: string) => void
+  publicKeyProvidedCallback?: (publicKey: string, publicKeyId: string) => void
 }

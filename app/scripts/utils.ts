@@ -55,7 +55,7 @@ export async function serializeKey(key: CryptoKey): Promise<object> {
 }
 
 export async function deserializeKey(value: { keyData: JsonWebKey, algorithm: AlgorithmIdentifier }): Promise<CryptoKey> {
-  return await crypto.subtle.importKey('jwk', value.keyData, value.algorithm, true, ['encrypt', 'decrypt'])
+  return await crypto.subtle.importKey('jwk', value.keyData, value.algorithm, true, value.keyData.key_ops as ReadonlyArray<KeyUsage>)
 }
 
 export async function serializeValue(value: object): Promise<object> {

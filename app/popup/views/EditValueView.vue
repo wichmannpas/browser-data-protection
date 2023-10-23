@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { VueElement, computed, onBeforeMount, reactive, ref } from 'vue'
+import { computed, onBeforeMount, reactive, ref } from 'vue'
 import EditValue from '../components/EditValue.vue';
 import InternalProtectedField from '../../scripts/InternalProtectedField'
+import { deserializeValue } from '../../scripts/utils';
+import { KeyAgreementKeyPair } from '../../scripts/KeyStore';
 
 const tabState = reactive({
   activeFieldId: null as null | number,
@@ -28,6 +30,7 @@ chrome.runtime.onMessage.addListener(message => {
   if (message.context !== 'bdp') {
     return
   }
+  let field: InternalProtectedField | undefined
   switch (message.operation) {
     case 'updateCiphertextPopup':
       if (message.fieldId !== tabState.activeFieldId) {
@@ -35,9 +38,9 @@ chrome.runtime.onMessage.addListener(message => {
         return
       }
       // update the ciphertext value
-      const field = tabState.fields.find(field => field.fieldId === message.fieldId)
+      field = tabState.fields.find(field => field.fieldId === message.fieldId) as InternalProtectedField | undefined
       if (field === undefined) {
-        throw new Error('active field no longer found?!?')
+        throw new Error('active field no longer found')
       }
       field.ciphertextValue = message.ciphertextValue
 
@@ -54,17 +57,34 @@ chrome.runtime.onMessage.addListener(message => {
       }, 6000)
 
       break
+    case 'updatePublicKeyData':
+      if (message.fieldId !== tabState.activeFieldId) {
+        // not relevant, discard
+        return
+      }
+      // update the ciphertext value
+      field = tabState.fields.find(field => field.fieldId === message.fieldId) as InternalProtectedField | undefined
+      if (field === undefined) {
+        throw new Error('active field no longer found')
+      }
+      field.setPublicKeyData(message.othersPublicKey, message.ownPublicKeyId)
+      break
   }
 })
 
 onBeforeMount(() => {
-  chrome.runtime.sendMessage({ context: 'bdp', operation: 'getTabState' }, response => {
-    response.fields = response.fields.map((field: InternalProtectedField) => {
+  chrome.runtime.sendMessage({ context: 'bdp', operation: 'getTabState' }, async response => {
+    for (let i = 0; i < response.fields.length; i++) {
+      const field: InternalProtectedField = response.fields[i]
       // Chrome uses JSON serialization, which makes a native object of the InternalProtectedField.
       const newField = new InternalProtectedField(field.fieldId, field.origin, field.element, field.options, field.ciphertextValue)
       Object.assign(newField, field)
-      return newField
-    })
+      if (newField.othersPublicKey !== undefined) {
+        newField.othersPublicKey = await deserializeValue(newField.othersPublicKey) as KeyAgreementKeyPair
+      }
+
+      response.fields[i] = newField
+    }
     Object.assign(tabState, response)
     ready.value = true
   })

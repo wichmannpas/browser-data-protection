@@ -1,4 +1,4 @@
-import KeyStore, { PasswordKey, StoredKey, SymmetricKey } from "./KeyStore"
+import KeyStore, { KeyAgreementKeyPair, PasswordKey, StoredKey, SymmetricKey } from "./KeyStore"
 import { ProtectedFieldOptions } from "./ProtectedFieldOptions"
 
 /**
@@ -11,6 +11,8 @@ export default class InternalProtectedField {
   element: HTMLElement
   options: ProtectedFieldOptions
   ciphertextValue: null | string
+  othersPublicKey?: KeyAgreementKeyPair
+  ownPublicKeyId?: string
   fieldTabId: number | null = null
 
   constructor(fieldId: number, origin: string, element: HTMLElement, options: ProtectedFieldOptions, ciphertextValue: null | string = null) {
@@ -104,12 +106,71 @@ export default class InternalProtectedField {
   /**
    * Set a ciphertext value for this field.
    * Called from the content script upon receiving a request from the web application.
+   * Propagates to the service worker.
    */
   async setCiphertextValue(ciphertextValue: string) {
     this.ciphertextValue = ciphertextValue
     this.sendMessage({
       operation: 'setFieldCiphertext',
       ciphertextValue,
+    })
+  }
+
+  /**
+   * Set a ciphertext value for this field.
+   * Called from the content script upon receiving a request from the web application.
+   * Propagates to the service worker.
+   */
+  async setPublicKeyData(othersPublicKey: string, ownPublicKeyId?: string) {
+    try {
+      this.othersPublicKey = await (new KeyStore()).loadOthersKeyAgreementPublicKey(othersPublicKey)
+    } catch {
+      console.warn('Invalid (other\'s) public key received.')
+    }
+    this.ownPublicKeyId = ownPublicKeyId
+    this.sendMessage({
+      operation: 'setPublicKeyData',
+      othersPublicKey,
+      ownPublicKeyId,
+    })
+  }
+
+  /**
+   * Propagate a generated public key for key agreement to this field.
+   * Propagates the key to the content script.
+   * Called from the browser action popup.
+   */
+  async propagateKeyAgreementPublicKey(publicKey: string, publicKeyId: string) {
+    this.ownPublicKeyId = publicKeyId
+
+    // Send message to the API script.
+    if (this.fieldTabId === null) {
+      throw new Error(`InternalProtectedField ${this.fieldId} has no tabId`)
+    }
+    await chrome.scripting.executeScript({
+      func: (fieldId: number, publicKey: string, publicKeyId: string) => {
+        // @ts-expect-error
+        window._bdp_internal_message({
+          operation: 'providePublicKey',
+          fieldId,
+          publicKey,
+          publicKeyId,
+        })
+      },
+      args: [this.fieldId, publicKey, publicKeyId],
+      target: {
+        tabId: this.fieldTabId,
+      },
+      world: 'MAIN'
+    })
+
+    // Send message to service worker (tab state)
+    chrome.runtime.sendMessage({
+      context: 'bdp',
+      operation: 'updateOwnPublicKeyId',
+      tabId: this.fieldTabId,
+      fieldId: this.fieldId,
+      ownPublicKeyId: publicKeyId,
     })
   }
 

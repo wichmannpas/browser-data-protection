@@ -23,16 +23,24 @@ window.addEventListener('message', (event) => {
   if (event.source !== window || event.data.context !== 'bdp') {
     return
   }
+  let field: InternalProtectedField
   switch (event.data.operation) {
     case 'createProtectedField':
       createProtectedField(event.data.fieldId, event.data.options)
       break
     case 'setFieldCiphertext':
-      const field = internalProtectedFields[event.data.fieldId]
+      field = internalProtectedFields[event.data.fieldId]
       if (field === undefined) {
         throw new Error(`Unknown fieldId: ${event.data.fieldId}`)
       }
       field.setCiphertextValue(event.data.ciphertext)
+      break
+    case 'provideFieldPublicKey':
+      field = internalProtectedFields[event.data.fieldId]
+      if (field === undefined) {
+        throw new Error(`Unknown fieldId: ${event.data.fieldId}`)
+      }
+      field.setPublicKeyData(event.data.othersPublicKey, event.data.ownPublicKeyId)
       break
     case 'clearAllActiveFields':
       // clear (selection of) all active fields
