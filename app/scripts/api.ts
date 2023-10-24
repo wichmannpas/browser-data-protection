@@ -19,7 +19,7 @@ import { ProtectedFieldOptions } from "./ProtectedFieldOptions";
       },
       {
         mode: 'external',
-        protectionModes: ['symmetric'],
+        protectionModes: ['symmetric', 'recipient'],
       },
       {
         mode: 'direct-plain',
@@ -140,6 +140,25 @@ import { ProtectedFieldOptions } from "./ProtectedFieldOptions";
       }
       if (this.#options.updateMode !== 'immediate' && this.#options.updateMode !== 'on-submit') {
         throw new Error(`ProtectedField invalid updateMode '${this.#options.updateMode}'`)
+      }
+
+      if (this.#options.protectionMode === 'recipient') {
+        if (this.#options.distributionMode === 'direct-plain') {
+          if (this.#options.recipientPublicKey === undefined) {
+            throw new Error(`ProtectedField missing required option 'recipientPublicKey'`)
+          }
+          if (typeof this.#options.recipientPublicKey !== 'string') {
+            throw new Error(`ProtectedField invalid recipientPublicKey '${this.#options.recipientPublicKey}'`)
+          }
+        } else {
+          if (this.#options.recipientPublicKey !== undefined) {
+            throw new Error(`ProtectedField protectionMode '${this.#options.protectionMode}' with distributionMode '${this.#options.distributionMode}' does not allow a recipientPublicKey`)
+          }
+        }
+      } else {
+        if (this.#options.recipientPublicKey !== undefined) {
+          throw new Error(`ProtectedField protectionMode '${this.#options.protectionMode}' does not allow a recipientPublicKey`)
+        }
       }
     }
 

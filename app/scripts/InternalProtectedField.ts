@@ -1,4 +1,4 @@
-import KeyStore, { KeyAgreementKeyPair, PasswordKey, StoredKey, SymmetricKey } from "./KeyStore"
+import KeyStore, { KeyAgreementKeyPair, PasswordKey, RecipientKey, StoredKey, SymmetricKey } from "./KeyStore"
 import { ProtectedFieldOptions } from "./ProtectedFieldOptions"
 
 /**
@@ -60,6 +60,8 @@ export default class InternalProtectedField {
         return await keyStore.encryptWithSymmetricKey(plaintext, key as SymmetricKey, this.origin)
       case 'password':
         return await keyStore.encryptWithPasswordKey(plaintext, key as PasswordKey, this.origin)
+      case 'recipient':
+        return await keyStore.encryptWithRecipientKey(plaintext, key as RecipientKey, this.origin)
       default:
         throw new Error(`Invalid protectionMode '${this.options.protectionMode}'`)
     }

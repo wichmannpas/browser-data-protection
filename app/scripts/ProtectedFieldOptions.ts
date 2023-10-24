@@ -4,6 +4,8 @@ export interface ProtectedFieldOptions {
   readOnly: boolean
   updateMode: 'immediate' | 'on-submit'
 
+  recipientPublicKey?: string
+
   // A callback that is executed when the ciphertext value of this field changes. Also triggered when the value is set/updated by the web application.
   ciphertextChangedCallback?: (ciphertext: string | null) => void
 

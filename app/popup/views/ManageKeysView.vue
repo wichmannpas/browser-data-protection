@@ -27,6 +27,7 @@ const keyCount = computed(() => {
   }
 })
 
+const generateNewKeyLoading = ref(false)
 const generateNewKeyActive = ref(false)
 const generateNewKeyData = reactive({
   description: '',
@@ -37,12 +38,20 @@ function clearGenerateNewKeyData() {
   generateNewKeyData.description = ''
   generateNewKeyData.allowedOrigins = '*'
   generateNewKeyData.distributionMode = 'user-only'
+  generateNewKeyLoading.value = false
 }
-function generateNewKey(keyType: string) {
+async function generateNewKey(keyType: string) {
   switch (keyType) {
     case 'symmetric':
+      generateNewKeyLoading.value = true
+      await keyStore.generateSymmetricKey(generateNewKeyData.description, generateNewKeyData.allowedOrigins.trim().split(' '), generateNewKeyData.distributionMode as SymmetricKey['distributionMode'])
       generateNewKeyActive.value = false
-      keyStore.generateSymmetricKey(generateNewKeyData.description, generateNewKeyData.allowedOrigins.trim().split(' '), generateNewKeyData.distributionMode as SymmetricKey['distributionMode'])
+      clearGenerateNewKeyData()
+      break
+    case 'recipient':
+      generateNewKeyLoading.value = true
+      await keyStore.generateRecipientKey(generateNewKeyData.description, generateNewKeyData.allowedOrigins.trim().split(' '))
+      generateNewKeyActive.value = false
       clearGenerateNewKeyData()
       break
     default:
@@ -188,7 +197,8 @@ onBeforeMount(() => {
                 placeholder="List of origins on that this key is allowed to be used." />
             </label>
             <div class="btn-group btn-group-block">
-              <button class="btn btn-primary" type="submit">
+              <button class="btn btn-primary" type="submit" :disabled="generateNewKeyLoading"
+                :class="{ loading: generateNewKeyLoading }">
                 Generate key
               </button>
               <button class="btn" @click="generateNewKeyActive = false; clearGenerateNewKeyData()">
@@ -237,6 +247,8 @@ onBeforeMount(() => {
         <KeyList v-if="activeKeyType === 'symmetric'" :keys="keyStore.getSymmetricKeys()" :key-store="keyStore"
           :key-type="activeKeyType" />
         <KeyList v-if="activeKeyType === 'password'" :keys="keyStore.getPasswordKeys()" :key-store="keyStore"
+          :key-type="activeKeyType" />
+        <KeyList v-if="activeKeyType === 'recipient'" :keys="keyStore.getRecipientKeys()" :key-store="keyStore"
           :key-type="activeKeyType" />
       </div>
     </div>

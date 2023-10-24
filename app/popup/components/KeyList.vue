@@ -3,7 +3,7 @@ import { PropType, Ref, computed, ref, watch } from 'vue'
 import KeyStore, { RecipientKey, StoredKey, SymmetricKey, isPasswordKey, isRecipientKey } from '../../scripts/KeyStore';
 import zxcvbn from 'zxcvbn';
 import PasswordStrength from './PasswordStrength.vue';
-import { serializeValue } from '../../scripts/utils';
+import { serializeKey, serializeValue } from '../../scripts/utils';
 
 const props = defineProps({
   keyType: {
@@ -24,10 +24,10 @@ const showDetailsForKey: Ref<null | string> = ref(null)
 
 const exportPassword = ref('')
 const exportPasswordStrength = computed(() => zxcvbn(exportPassword.value))
-const exportPasswordLoading = ref(false)
-const exportedKey: Ref<null | string> = ref(null)
+const exportKeyLoading = ref(false)
+const exportedKey: Ref<string> = ref('')
 async function exportKey(key: SymmetricKey) {
-  exportPasswordLoading.value = true
+  exportKeyLoading.value = true
 
   // create a non-stored password key as wrapping key for the export
   const wrappingKey = await props.keyStore.generatePasswordKey(exportPassword.value, '', ['*'], false)
@@ -37,13 +37,20 @@ async function exportKey(key: SymmetricKey) {
   const wrappedKey = await props.keyStore.encryptWithPasswordKey(JSON.stringify(serializedKey), wrappingKey, '')
 
   exportedKey.value = btoa(wrappedKey)
-  exportPasswordLoading.value = false
+  exportKeyLoading.value = false
+}
+
+async function exportPublicKey(key: RecipientKey) {
+  exportKeyLoading.value = true
+
+  exportedKey.value = btoa(JSON.stringify(await serializeValue(key)))
+  exportKeyLoading.value = false
 }
 
 watch(() => showDetailsForKey.value, () => {
   exportPassword.value = ''
-  exportPasswordLoading.value = false
-  exportedKey.value = null
+  exportKeyLoading.value = false
+  exportedKey.value = ''
 })
 
 function deleteKey(key: StoredKey | RecipientKey) {
@@ -167,23 +174,44 @@ function deleteKey(key: StoredKey | RecipientKey) {
                       <strong>Export key</strong>
                     </label>
                     <div class="accordion-body">
-                      When you export the key, you receive a
+                      When you export the key, you receive a password-protected copy of the secret key that can be
+                      imported into another browser on another device.
                       <div v-if="(key as SymmetricKey).distributionMode === 'user-only'" class="toast toast-warning">
                         This is <strong>your personal key</strong> and must not be shared with other users.
                         Only share this key with your other browsers and devices.
                         <strong>Never provide the exported key or the password you choose for the export to
                           anybody.</strong>
                       </div>
-                      <label class="form-label">
-                        Export password
-                        <input type="password" class="form-input" v-model="exportPassword"
-                          :disabled="exportPasswordLoading"
-                          placeholder="This password needs to be entered to import this key." />
-                      </label>
-                      <PasswordStrength :passwordStrength="exportPasswordStrength" />
-                      <button type="submit" class="btn btn-primary btn-block" :class="{ loading: exportPasswordLoading }"
-                        :disabled="exportPasswordLoading">Export key</button>
-                      <div v-if="exportedKey !== null" class="exported-key-div">
+                      <template v-if="exportedKey === ''">
+                        <label class="form-label">
+                          Export password
+                          <input type="password" class="form-input" v-model="exportPassword" :disabled="exportKeyLoading"
+                            placeholder="This password needs to be entered to import this key." />
+                        </label>
+                        <PasswordStrength :passwordStrength="exportPasswordStrength" />
+                      </template>
+                      <button type="submit" class="btn btn-primary btn-block" :class="{ loading: exportKeyLoading }"
+                        :disabled="exportKeyLoading || exportedKey !== ''">Export key</button>
+                      <div v-if="exportedKey !== ''" class="exported-key-div">
+                        <strong>Exported key:</strong>
+                        <textarea v-model="exportedKey" readonly class="form-input" rows="4"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+                <form v-else-if="keyType === 'recipient'" @submit.prevent="exportPublicKey(key as RecipientKey)">
+                  <div class="accordion">
+                    <input type="checkbox" id="accordion-1" name="accordion-checkbox" hidden>
+                    <label class="accordion-header" for="accordion-1">
+                      <i class="icon icon-arrow-right mr-1"></i>
+                      <strong>Export public key</strong>
+                    </label>
+                    <div class="accordion-body">
+                      You can export the public key to provide it to the other party to allow them to encrypt values for
+                      you.
+                      <button type="submit" class="btn btn-primary btn-block" :class="{ loading: exportKeyLoading }"
+                        :disabled="exportKeyLoading || exportedKey !== ''">Export public key</button>
+                      <div v-if="exportedKey !== ''" class="exported-key-div">
                         <strong>Exported key:</strong>
                         <textarea v-model="exportedKey" readonly class="form-input" rows="4"></textarea>
                       </div>

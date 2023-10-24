@@ -25,6 +25,8 @@ const selectableKeys = computed(() => {
       return props.keyStore.getSymmetricKeysForOrigin(props.field.origin, props.field.options.distributionMode as SymmetricKey['distributionMode'])
     case 'password':
       return props.keyStore.getPasswordKeysForOrigin(props.field.origin)
+    case 'recipient':
+      return props.keyStore.getRecipientKeysForOrigin(props.field.origin)
     default:
       throw new Error('unsupported protection mode')
   }
@@ -38,7 +40,11 @@ function navigateToCreateKey() {
 </script>
 
 <template>
-  <div v-if="selectableKeys.length > 0 && !deriveNewKey">
+  <template v-if="field.options.protectionMode === 'recipient' && field.options.distributionMode === 'direct-plain'">
+    This field is defined to get its encryption key from the web application.
+    However, <strong>the web application did not provide the public key</strong> for this field.
+  </template>
+  <div v-else-if="selectableKeys.length > 0 && !deriveNewKey">
     <p>
       This field does not have a value.
       <strong>
@@ -74,7 +80,8 @@ function navigateToCreateKey() {
     </table>
   </div>
   <p v-else>
-    <KeyAgreement v-if="field.options.distributionMode === 'key-agreement'" :field="field" :key-store="keyStore" @key-generated="key => { deriveNewKey = false; usedKey = key }" />
+    <KeyAgreement v-if="field.options.distributionMode === 'key-agreement'" :field="field" :key-store="keyStore"
+      @key-generated="key => { deriveNewKey = false; usedKey = key }" />
     <template v-else>
       No suitable key available.
       You can create a new key using the <a href="#" @click="navigateToCreateKey">key manager</a>.

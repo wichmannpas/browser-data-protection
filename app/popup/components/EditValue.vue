@@ -3,9 +3,10 @@ import { Ref, computed, onBeforeMount, ref, watch } from 'vue'
 import zxcvbn from 'zxcvbn'
 import PasswordStrength from './PasswordStrength.vue'
 import InternalProtectedField from '../../scripts/InternalProtectedField'
-import KeyStore, { BDPParameterError, KeyMissingError, StoredKey, keyTypes } from '../../scripts/KeyStore'
+import KeyStore, { BDPParameterError, KeyMissingError, RecipientKey, StoredKey, keyTypes } from '../../scripts/KeyStore'
 import { activeView, previouslyUsedKey, usedKey } from '../../scripts/popupAppState'
 import KeySelection from './KeySelection.vue'
+import { deserializeValue } from '../../scripts/utils'
 
 const props = defineProps({
   field: {
@@ -122,6 +123,10 @@ async function loadCiphertext() {
             return
           }
           break
+        case 'recipient':
+          throw new Error('tbd')
+          // TODO
+          break
         default:
           throw new Error(`unsupported protection mode ${props.field.options.protectionMode}`)
       }
@@ -142,7 +147,9 @@ async function loadCiphertext() {
     }
   } else {
     previouslyUsedKey.value = usedKey.value
-    usedKey.value = null
+    if (props.field.options.protectionMode !== 'recipient') {
+      usedKey.value = null
+    }
     plaintextValue.value = ''
     ciphertextProvidedToWebApp.value = false
   }
@@ -152,7 +159,17 @@ async function loadCiphertext() {
   ciphertextLoading.value = false
 }
 
-onBeforeMount(loadCiphertext)
+onBeforeMount(async () => {
+  if (props.field.options.protectionMode === 'recipient' && props.field.options.distributionMode === 'direct-plain' && props.field.options.recipientPublicKey !== undefined) {
+    try {
+      usedKey.value = await deserializeValue(JSON.parse(atob(props.field.options.recipientPublicKey))) as RecipientKey
+    } catch (e) {
+      console.warn(e)
+    }
+  }
+
+  loadCiphertext()
+})
 watch(() => props.field.ciphertextValue, loadCiphertext)
 
 

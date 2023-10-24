@@ -22,7 +22,6 @@ export function bufferToBase64(buffer: ArrayBuffer): string {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
-
 }
 
 /**
@@ -42,20 +41,35 @@ export function bufferFromBase64(value: string): ArrayBuffer {
  * For asymmetric keys, the public key is used to derive the hash, which needs to be provided by the caller as the only parameter.
  */
 export async function deriveKeyId(key: CryptoKey): Promise<string> {
-  const rawKey = await crypto.subtle.exportKey('raw', key)
+  let rawKey: ArrayBuffer
+  if (key.type === 'secret') {
+    rawKey = await crypto.subtle.exportKey('raw', key)
+  } else if (key.type === 'public') {
+    rawKey = await crypto.subtle.exportKey('spki', key)
+  } else {
+    throw new Error(`unexpected key type ${key.type} for deriveKeyId`)
+  }
   const hash = await crypto.subtle.digest('SHA-256', rawKey)
   return bufferToHex(hash)
 }
 
 export async function serializeKey(key: CryptoKey): Promise<object> {
+  const algorithm = Object.assign(Object.create(null), key.algorithm)
+  if (algorithm.publicExponent !== undefined) {
+    algorithm.publicExponent = bufferToBase64(algorithm.publicExponent)
+  }
   return {
-    algorithm: key.algorithm,
-    keyData: await crypto.subtle.exportKey('jwk', key)
+    algorithm,
+    keyData: await crypto.subtle.exportKey('jwk', key),
   }
 }
 
 export async function deserializeKey(value: { keyData: JsonWebKey, algorithm: AlgorithmIdentifier }): Promise<CryptoKey> {
-  return await crypto.subtle.importKey('jwk', value.keyData, value.algorithm, true, value.keyData.key_ops as ReadonlyArray<KeyUsage>)
+  const algorithm = Object.assign(Object.create(null), value.algorithm)
+  if (algorithm.publicExponent !== undefined) {
+    algorithm.publicExponent = bufferFromBase64(algorithm.publicExponent)
+  }
+  return await crypto.subtle.importKey('jwk', value.keyData, algorithm, true, value.keyData.key_ops as ReadonlyArray<KeyUsage>)
 }
 
 export async function serializeValue(value: object): Promise<object> {

@@ -59,6 +59,8 @@ interface CiphertextData {
 interface PasswordKeyCiphertextData extends CiphertextData {
   salt: string
 }
+interface RecipientCiphertextData extends CiphertextData {
+}
 
 export default class KeyStore {
   static #keyStore: KeyStore | null = null
@@ -325,8 +327,45 @@ export default class KeyStore {
   getRecipientKeys() {
     return Object.values(this.#recipientKeys).sort((a, b) => a.created.valueOf() - b.created.valueOf())
   }
+  getRecipientKeysForOrigin(origin: string) {
+    return this.getRecipientKeys().filter(key => key.allowedOrigins.includes(origin) || key.allowedOrigins.includes('*'))
+  }
   getRecipientKeyCount(): number {
     return Object.keys(this.#recipientKeys).length
+  }
+  /**
+   * Generate a recipient key pair.
+   * This uses the 'external' distribution mode.
+   */
+  async generateRecipientKey(shortDescription: string, allowedOrigins: string[]): Promise<RecipientKey> {
+    const keyPair = await crypto.subtle.generateKey(
+      {
+        name: 'RSA-OAEP',
+        modulusLength: 4096,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: 'SHA-256',
+      },
+      true,
+      ['encrypt', 'decrypt'],
+    )
+    const keyObj: RecipientKey = {
+      keyId: await deriveKeyId(keyPair.publicKey),
+      shortDescription,
+      created: new Date(),
+      lastUsed: null,
+      allowedOrigins,
+      previouslyUsedOnOrigins: [],
+      privateKey: keyPair.privateKey,
+      publicKey: keyPair.publicKey,
+    }
+    this.#recipientKeys[keyObj.keyId] = keyObj
+    await this.#save()
+    return keyObj
+  }
+  async encryptWithRecipientKey(plaintext: string, key: RecipientKey, origin: string): Promise<string> {
+    const data = await crypto.subtle.encrypt()
+    data.salt = key.salt
+    return JSON.stringify(data)
   }
 
   /**
