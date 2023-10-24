@@ -332,14 +332,14 @@ export default class KeyStore {
   /**
    * Generate and store an ECDH key pair bound to the specified origin and return the key id and the serialized public key.
    */
-  async generateKeyAgreementKeyPair(origin: string): Promise<[string, string]> {
+  async generateKeyAgreementKeyPair(origin: string): Promise<[KeyAgreementKeyPair, string]> {
     let keyPair = await crypto.subtle.generateKey(
       {
-        name: "ECDH",
-        namedCurve: "P-521",
+        name: 'ECDH',
+        namedCurve: 'P-521',
       },
       true,
-      ["deriveKey"],
+      ['deriveKey'],
     )
     const key: KeyAgreementKeyPair = {
       keyId: await deriveKeyId(keyPair.publicKey),
@@ -349,7 +349,7 @@ export default class KeyStore {
     }
     this.#keyAgreementKeyPairs[key.keyId] = key
     await this.#save()
-    return [key.keyId, btoa(JSON.stringify({
+    return [key, btoa(JSON.stringify({
       publicKey: await serializeKey(keyPair.publicKey),
       origin,
     }))]
@@ -358,14 +358,18 @@ export default class KeyStore {
   /**
    * Load previously generated key agreement key pair.
    */
-  async loadKeyAgreementKeyPair (keyId: string, origin: string): Promise<KeyAgreementKeyPair | undefined> {
-    return this.#keyAgreementKeyPairs[keyId]
+  async loadKeyAgreementKeyPair(keyId: string, origin: string): Promise<KeyAgreementKeyPair | undefined> {
+    const keyPair = this.#keyAgreementKeyPairs[keyId]
+    if (keyPair === undefined || keyPair.origin != origin) {
+      return undefined
+    }
+    return keyPair
   }
 
   /**
    * Load the public key received from another party for key agreement.
    */
-  async loadOthersKeyAgreementPublicKey (publicKey: string): Promise<KeyAgreementKeyPair> {
+  async loadOthersKeyAgreementPublicKey(publicKey: string): Promise<KeyAgreementKeyPair> {
     let key: CryptoKey
     let origin: string
     try {
@@ -387,6 +391,46 @@ export default class KeyStore {
       publicKey: key,
       origin,
     }
+  }
+
+  async deriveSymmetricKeyFromKeyAgreement(ownKeyPair: KeyAgreementKeyPair, othersPublicKey: KeyAgreementKeyPair, origin: string): Promise<SymmetricKey> {
+    if (origin !== ownKeyPair.origin || origin !== othersPublicKey.origin) {
+      throw new BDPParameterError('The origin of the key agreement key pairs does not match the origin of the key derivation.')
+    }
+    if (ownKeyPair.privateKey === undefined) {
+      throw new BDPParameterError('The own key agreement key pair does not contain a private key.')
+    }
+
+    const key = await window.crypto.subtle.deriveKey(
+      {
+        name: 'ECDH',
+        public: othersPublicKey.publicKey,
+      },
+      ownKeyPair.privateKey,
+      {
+        name: 'AES-GCM',
+        length: 256,
+      },
+      true,
+      ['encrypt', 'decrypt'],
+    )
+    const keyObj: SymmetricKey = {
+      keyId: await deriveKeyId(key),
+      shortDescription: `Derived from public keys ${ownKeyPair.keyId} (own) and ${othersPublicKey.keyId} (other's). Be aware that the other party will only be able to decrypt values if they successfully received your public key during the key agreement.`,
+      created: new Date(),
+      lastUsed: null,
+      allowedOrigins: [origin],
+      previouslyUsedOnOrigins: [],
+      key,
+      distributionMode: 'key-agreement',
+    }
+    this.#symmetricKeys[keyObj.keyId] = keyObj
+
+    // delete own key agreement key pair so it cannot be re-used
+    delete this.#keyAgreementKeyPairs[ownKeyPair.keyId]
+
+    await this.#save()
+    return keyObj
   }
 
   /**

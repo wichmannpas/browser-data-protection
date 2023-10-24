@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { PropType, Ref, onBeforeMount, ref } from 'vue';
 import InternalProtectedField from '../../scripts/InternalProtectedField';
-import KeyStore from '../../scripts/KeyStore';
+import KeyStore, { KeyAgreementKeyPair } from '../../scripts/KeyStore';
 
 const props = defineProps({
   field: {
@@ -13,31 +13,38 @@ const props = defineProps({
     required: true
   },
 })
+const emit = defineEmits(['keyGenerated'])
 
 const generateKeyLoading = ref(false)
-const generatedKeyId: Ref<string | null> = ref(null)
+const generatedKey: Ref<KeyAgreementKeyPair | null> = ref(null)
 async function generateKeyPair() {
-  if (generatedKeyId.value !== null) {
+  if (generatedKey.value !== null) {
     console.warn('Request to generate a key pair in spite of already having generated one.')
     return
   }
 
   generateKeyLoading.value = true
-  const [keyId, publicKey] = await props.keyStore.generateKeyAgreementKeyPair(props.field.origin)
-  props.field.propagateKeyAgreementPublicKey(publicKey, keyId)
-  generatedKeyId.value = keyId
+  const [key, publicKey] = await props.keyStore.generateKeyAgreementKeyPair(props.field.origin)
+  props.field.propagateKeyAgreementPublicKey(publicKey, key.keyId)
+  generatedKey.value = key
   generateKeyLoading.value = false
 }
 
 const deriveKeyLoading = ref(false)
+const derivedKeyId: Ref<string | null> = ref(null)
 async function deriveKey() {
-  if (generatedKeyId.value === null || props.field.othersPublicKey === undefined || props.field.othersPublicKey.origin !== props.field.origin) {
+  if (generatedKey.value === null || props.field.othersPublicKey === undefined || props.field.othersPublicKey.origin !== props.field.origin) {
     console.warn('Request to derive a key in spite of not having generated a key pair or not having received (a valid) other party\'s public key.')
     return
   }
 
   deriveKeyLoading.value = true
-  // TODO
+
+  const key = await props.keyStore.deriveSymmetricKeyFromKeyAgreement(generatedKey.value, props.field.othersPublicKey, props.field.origin)
+  derivedKeyId.value = key.keyId
+  deriveKeyLoading.value = false
+
+  emit('keyGenerated', key)
 }
 
 const ready = ref(false)
@@ -48,11 +55,11 @@ onBeforeMount(async () => {
 
   // if own key id is set, load the key
   if (props.field.ownPublicKeyId !== undefined) {
-    const keyPair = await props.keyStore.loadKeyAgreementKeyPair(props.field.ownPublicKeyId, origin)
+    const keyPair = await props.keyStore.loadKeyAgreementKeyPair(props.field.ownPublicKeyId, props.field.origin)
     if (keyPair === undefined) {
       ownKeyPairNotFound.value = true
     } else {
-      generatedKeyId.value = props.field.ownPublicKeyId
+      generatedKey.value = keyPair
     }
   }
 
@@ -73,15 +80,15 @@ onBeforeMount(async () => {
         The key pair as well as the symmetric key that results from the key agreement are bound to this specifc origin and
         cannot be used in another web application.
 
-        <div v-if="generatedKeyId !== null">
+        <div v-if="generatedKey !== null">
           A public key was generated and provided to the web application. As soon as the key from the other party is
           received, the encryption key can be derived.
           The key has the following id:
           <div class="key-id">
-            {{ generatedKeyId }}
+            {{ generatedKey.keyId }}
           </div>
         </div>
-        <button v-if="generatedKeyId === null" @click="generateKeyPair" class="btn btn-block"
+        <button v-if="generatedKey === null" @click="generateKeyPair" class="btn btn-block"
           :disabled="generateKeyLoading" :class="{ loading: generateKeyLoading }">Generate key pair</button>
       </div>
 
@@ -109,7 +116,7 @@ onBeforeMount(async () => {
 
       <h4>Step 3: Generate Final Key</h4>
       <div
-        v-if="generatedKeyId !== null && field.othersPublicKey !== undefined && field.othersPublicKey.origin === field.origin">
+        v-if="generatedKey !== null && field.othersPublicKey !== undefined && field.othersPublicKey.origin === field.origin">
         <p>
           The public key of the other party was received and verified.
           The key agreement protocol can now be completed and the encryption key can be derived.

@@ -19,7 +19,7 @@ import { ProtectedFieldOptions } from "./ProtectedFieldOptions";
       },
       {
         mode: 'external',
-        protectionModes: ['symmetric', 'recipient'],
+        protectionModes: ['symmetric'],
       },
       {
         mode: 'direct-plain',

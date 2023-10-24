@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PropType, computed } from 'vue'
+import { PropType, computed, ref } from 'vue'
 import InternalProtectedField from '../../scripts/InternalProtectedField'
 import KeyStore, { SymmetricKey } from '../../scripts/KeyStore'
 import { ProtectedFieldOptions } from '../../scripts/ProtectedFieldOptions'
@@ -16,6 +16,8 @@ const props = defineProps({
     required: true
   },
 })
+
+const deriveNewKey = ref(false)
 
 const selectableKeys = computed(() => {
   switch (props.field.options.protectionMode) {
@@ -36,13 +38,17 @@ function navigateToCreateKey() {
 </script>
 
 <template>
-  <div v-if="selectableKeys.length > 0">
+  <div v-if="selectableKeys.length > 0 && !deriveNewKey">
     <p>
       This field does not have a value.
       <strong>
         Choose the key to use for this field.
       </strong>
       You can manage your keys in the <a href="#" @click="activeView = 'manage-keys'">key manager</a>.
+    </p>
+    <p v-if="props.field.options.distributionMode === 'key-agreement'">
+      You can <button class="btn btn-link" @click="deriveNewKey = true">perform a new key agreement</button> with the
+      other party for this field.
     </p>
     <table class="table table-striped table-hover">
       <tbody>
@@ -68,7 +74,7 @@ function navigateToCreateKey() {
     </table>
   </div>
   <p v-else>
-    <KeyAgreement v-if="field.options.distributionMode === 'key-agreement'" :field="field" :key-store="keyStore" />
+    <KeyAgreement v-if="field.options.distributionMode === 'key-agreement'" :field="field" :key-store="keyStore" @key-generated="key => { deriveNewKey = false; usedKey = key }" />
     <template v-else>
       No suitable key available.
       You can create a new key using the <a href="#" @click="navigateToCreateKey">key manager</a>.
