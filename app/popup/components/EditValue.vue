@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Ref, computed, onBeforeMount, ref, watch } from 'vue'
 import InternalProtectedField from '../../scripts/InternalProtectedField'
-import KeyStore, { BDPParameterError, KeyMissingError, RecipientKey, StoredKey, keyTypes } from '../../scripts/KeyStore'
+import KeyStore, { BDPParameterError, EncodedCiphertext, KeyId, KeyMissingError, RecipientKey, StoredKey, keyTypes } from '../../scripts/KeyStore'
 import { activeView, chosenPassword, chosenPasswordStoreKey, ciphertextFresh, ciphertextProvidedToWebApp, editReady, passwordReRequest, passwordReRequestError, plaintextValue, previouslyUsedKey, reRequestedPassword, usedKey } from '../../scripts/popupAppState'
 import KeySelection from './KeySelection.vue'
 import PasswordKeySelection from './PasswordKeySelection.vue'
@@ -13,6 +13,8 @@ const props = defineProps({
     required: true
   }
 })
+
+const senderRecipientKeyId: Ref<KeyId | null> = ref(null)
 
 const fieldKeyTypeData = computed(() => {
   const keyTypeData = keyTypes.find(keyType => keyType[0] === props.field.options.protectionMode)
@@ -51,7 +53,7 @@ async function loadCiphertext() {
   chosenPasswordStoreKey.value = true
   await keyStore.load()
   if (props.field.ciphertextValue !== null) {
-    let key: StoredKey, plaintext: string
+    let key: StoredKey | undefined, plaintext: string
     try {
       switch (props.field.options.protectionMode) {
         case 'symmetric':
@@ -76,7 +78,9 @@ async function loadCiphertext() {
           if (props.field.options.recipientPublicKey === undefined) {
             throw new Error('no recipient public key provided')
           }
-          [key, plaintext] = await keyStore.decryptWithRecipientKey(props.field.ciphertextValue, props.field.origin, (usedKey.value as RecipientKey).keyId)
+          let usedDecryptionKey: RecipientKey
+          [usedDecryptionKey, plaintext] = await keyStore.decryptWithRecipientKey(props.field.ciphertextValue, props.field.origin, (usedKey.value as RecipientKey).keyId)
+          senderRecipientKeyId.value = usedDecryptionKey.keyId
           break
         default:
           throw new Error(`unsupported protection mode ${props.field.options.protectionMode}`)
@@ -99,11 +103,12 @@ async function loadCiphertext() {
       editReady.value = true
       return
     }
-  } else {
+  } else { // ciphertextValue === null
     previouslyUsedKey.value = usedKey.value
     if (props.field.options.protectionMode !== 'recipient') {
       usedKey.value = null
     }
+    senderRecipientKeyId.value = null
     plaintextValue.value = ''
     ciphertextProvidedToWebApp.value = false
   }
@@ -129,7 +134,13 @@ watch(() => props.field.ciphertextValue, loadCiphertext)
 
 async function handleNewValue(value: string, key: StoredKey) {
   ciphertextLoading.value = true
-  ciphertextValueCopy = await props.field.encryptNewValue(value, key, keyStore)
+  const encryptionResult = await props.field.encryptNewValue(value, key, keyStore)
+  if (props.field.options.protectionMode === 'recipient') {
+    senderRecipientKeyId.value = (encryptionResult[0] as RecipientKey).keyId
+    ciphertextValueCopy = encryptionResult[1]
+  } else {
+    ciphertextValueCopy = encryptionResult as EncodedCiphertext
+  }
   await props.field.propagateNewValue(ciphertextValueCopy)
   ciphertextLoading.value = false
   ciphertextFresh.value = true
@@ -208,10 +219,23 @@ function clearField() {
           <br />
 
           <strong>
-            Used key:
+            Used key<template v-if="field.options.protectionMode === 'recipient'"> (<em>of recipient</em>)</template>:
           </strong>
           <span class="key-id">{{ usedKey.keyId }}</span>
           ({{ usedKey.shortDescription }})
+          <template v-if="field.options.protectionMode === 'recipient'">
+            <br />
+            <strong>
+              Used key (<em>by this browser</em>):
+            </strong>
+            <template v-if="senderRecipientKeyId !== null">
+              <span class="key-id">{{ senderRecipientKeyId }}</span>
+              Provide this key id to the recipient to allow them to verify the key integrity of the received encryption.
+            </template>
+            <template v-else>
+              <em>None yet. Encrypt a value to display your key.</em>
+            </template>
+          </template>
         </p>
 
         <label class="form-label">

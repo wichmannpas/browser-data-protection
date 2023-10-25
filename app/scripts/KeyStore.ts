@@ -397,7 +397,7 @@ export default class KeyStore {
     )
     return new TextDecoder().decode(plaintextBuffer)
   }
-  async encryptWithRecipientKey(plaintext: string, recipientKey: RecipientKey, origin: string): Promise<string> {
+  async encryptWithRecipientKey(plaintext: string, recipientKey: RecipientKey, origin: string): Promise<[RecipientKey, EncodedCiphertext]> {
     // load own key pair used for this origin
     const ownKeyPair = await this.getOriginKeyPair(origin)
 
@@ -408,12 +408,14 @@ export default class KeyStore {
     encryptedEphemeralKey[recipientKey.keyId] = await this.#encryptRSA(serializedEphemeralKey, recipientKey.publicKey)
     encryptedEphemeralKey[ownKeyPair.keyId] = await this.#encryptRSA(serializedEphemeralKey, ownKeyPair.publicKey)
 
+    // TODO: add signature of sender!
+
     const ciphertextData: RecipientCiphertextData = {
       encryptedEphemeralKey,
       recipientKeyId: recipientKey.keyId,
       encryptedValue,
     }
-    return JSON.stringify(ciphertextData)
+    return [ownKeyPair, JSON.stringify(ciphertextData)]
   }
   async decryptWithRecipientKey(ciphertext: string, origin: string, recipientKeyId: KeyId): Promise<[RecipientKey, string]> {
     // load own key pair used for this origin

@@ -1,4 +1,4 @@
-import KeyStore, { KeyAgreementKeyPair, PasswordKey, RecipientKey, StoredKey, SymmetricKey } from "./KeyStore"
+import KeyStore, { EncodedCiphertext, KeyAgreementKeyPair, KeyId, PasswordKey, RecipientKey, StoredKey, SymmetricKey } from "./KeyStore"
 import { ProtectedFieldOptions } from "./ProtectedFieldOptions"
 
 /**
@@ -54,7 +54,7 @@ export default class InternalProtectedField {
    * Does not store the plaintext.
    * Called from the browser action popup.
    */
-  async encryptNewValue(plaintext: string, key: StoredKey, keyStore: KeyStore): Promise<string> {
+  async encryptNewValue(plaintext: string, key: StoredKey, keyStore: KeyStore): Promise<EncodedCiphertext | [RecipientKey, EncodedCiphertext]> {
     switch (this.options.protectionMode) {
       case 'symmetric':
         return await keyStore.encryptWithSymmetricKey(plaintext, key as SymmetricKey, this.origin)
