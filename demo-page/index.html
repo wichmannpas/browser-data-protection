@@ -339,14 +339,18 @@
         updateMode: 'immediate',
         ciphertextChangedCallback (ciphertext) {
           ciphertextField5.innerText = ciphertext
-          ws.send(JSON.stringify({ operation: 'provideNewCiphertext', ciphertext }))
+          if (ws !== undefined) {
+            ws.send(JSON.stringify({ operation: 'provideNewCiphertext', ciphertext }))
+          }
         },
         publicKeyProvidedCallback (publicKey, publicKeyId) {
           console.log('Field 5 received public key', publicKey, 'with id', publicKeyId)
           field5KeyDisplay.value = publicKey
           field5KeyIdDisplay.innerText = publicKeyId
 
-          ws.send(JSON.stringify({ operation: 'providePublicKey', publicKey, publicKeyId }))
+          if (ws !== undefined) {
+            ws.send(JSON.stringify({ operation: 'providePublicKey', publicKey, publicKeyId }))
+          }
         }
       })
       console.log(cryptoField5)
