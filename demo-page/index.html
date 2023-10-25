@@ -137,7 +137,7 @@
           To start the demo WebSocket, run the following command within the directory of this demo page:
           <br />
           <code>
-          python3 ./key_agreement_websocket_server.py
+          python3 ./demo_websocket_server.py
         </code>
           <br />
           This command starts the demo WebSocket server on port 8001.
@@ -170,7 +170,8 @@
           class="form-input"></textarea>
         <p>
           <strong>Provide a public key (of another party) for this field.</strong>
-          If you want to use this demo serverless, you can directly copy-paste the key from the display field of this demo
+          If you want to use this demo serverless, you can directly copy-paste the key from the display field of this
+          demo
           page in another browser.
           If you use the WebSocket for this demo, this manual step is not required.
         </p>
@@ -306,16 +307,29 @@
           wsStateElem.innerText = 'connected'
         }
         ws.onclose = () => {
-          wsStateElem.innerText = 'closed – is key_agreement_websocket_server.py running?'
+          wsStateElem.innerText = 'closed – is demo_websocket_server.py running?'
           ws = undefined
           wsConnectButton.removeAttribute('disabled')
         }
+        const observedCiphertexts = []
         ws.onmessage = message => {
           console.log('Received WebSocket message', message.data)
           message = JSON.parse(message.data)
-          if (message.operation === 'providePublicKey') {
-            cryptoField5.providePublicKey(message.publicKey)
-            field5KeyInput.value = message.publicKey
+          switch (message.operation) {
+            case 'providePublicKey':
+              cryptoField5.providePublicKey(message.publicKey)
+              field5KeyInput.value = message.publicKey
+              break
+            case 'provideNewCiphertext':
+              if (observedCiphertexts.includes(message.ciphertext)) {
+                break
+              }
+              ciphertextField5.innerText = message.ciphertext
+              cryptoField5.setCiphertext(message.ciphertext)
+              observedCiphertexts.push(message.ciphertext)
+              break
+            default:
+              throw new Error(`invalid operation ${message.operation}`)
           }
         }
       })
@@ -325,6 +339,7 @@
         updateMode: 'immediate',
         ciphertextChangedCallback (ciphertext) {
           ciphertextField5.innerText = ciphertext
+          ws.send(JSON.stringify({ operation: 'provideNewCiphertext', ciphertext }))
         },
         publicKeyProvidedCallback (publicKey, publicKeyId) {
           console.log('Field 5 received public key', publicKey, 'with id', publicKeyId)
@@ -368,7 +383,7 @@
       // cryptoField7.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b752e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
       console.log(cryptoField7)
 
-      setTimeout(() => field5.click(), 50)
+      setTimeout(() => field6.click(), 50)
     })();
   </script>
 </body>
