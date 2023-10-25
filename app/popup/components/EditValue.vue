@@ -73,15 +73,20 @@ async function loadCiphertext() {
           }
           break
         case 'recipient':
-          throw new Error('tbd')
-          // TODO
+          if (props.field.options.recipientPublicKey === undefined) {
+            throw new Error('no recipient public key provided')
+          }
+          [key, plaintext] = await keyStore.decryptWithRecipientKey(props.field.ciphertextValue, props.field.origin, (usedKey.value as RecipientKey).keyId)
           break
         default:
           throw new Error(`unsupported protection mode ${props.field.options.protectionMode}`)
       }
       ciphertextValueCopy = props.field.ciphertextValue
 
-      usedKey.value = key
+      if (key !== undefined) {
+        // the key is only updated if it is set in the decryption.
+        usedKey.value = key
+      }
       plaintextValue.value = plaintext
       ciphertextProvidedToWebApp.value = true
     } catch (e) {

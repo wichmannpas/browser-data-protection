@@ -1,5 +1,5 @@
 import { reactive, toRaw } from 'vue'
-import { bufferFromBase64, bufferToBase64, deriveKeyId, deserializeKey, deserializeValues, serializeKey, serializeValues } from './utils'
+import { bufferFromBase64, bufferToBase64, deriveKeyId, deserializeKey, deserializeValue, deserializeValues, serializeKey, serializeValue, serializeValues } from './utils'
 
 export const keyTypes = [
   // [keyType, keyText, keyTextAdjective (used with the word "key" appended), keyDescription]
@@ -387,12 +387,22 @@ export default class KeyStore {
     )
     return bufferToBase64(ciphertext)
   }
+  async #decryptRSA(ciphertext: EncodedCiphertext, privateKey: CryptoKey): Promise<EncodedCiphertext> {
+    const plaintextBuffer = await crypto.subtle.decrypt(
+      {
+        name: 'RSA-OAEP',
+      },
+      privateKey,
+      bufferFromBase64(ciphertext),
+    )
+    return new TextDecoder().decode(plaintextBuffer)
+  }
   async encryptWithRecipientKey(plaintext: string, recipientKey: RecipientKey, origin: string): Promise<string> {
     // load own key pair used for this origin
     const ownKeyPair = await this.getOriginKeyPair(origin)
 
     const ephemeralKey = await this.generateSymmetricKey('', [origin], 'external', false)
-    const serializedEphemeralKey = JSON.stringify(await serializeKey(ephemeralKey.key))
+    const serializedEphemeralKey = JSON.stringify(await serializeValue(ephemeralKey))
     const encryptedValue = await this.#encryptAES(plaintext, ephemeralKey, origin)
     const encryptedEphemeralKey = Object.create(null)
     encryptedEphemeralKey[recipientKey.keyId] = await this.#encryptRSA(serializedEphemeralKey, recipientKey.publicKey)
@@ -404,6 +414,34 @@ export default class KeyStore {
       encryptedValue,
     }
     return JSON.stringify(ciphertextData)
+  }
+  async decryptWithRecipientKey(ciphertext: string, origin: string, recipientKeyId: KeyId): Promise<[RecipientKey, string]> {
+    // load own key pair used for this origin
+    const ownKeyPair = await this.getOriginKeyPair(origin)
+
+    let data: RecipientCiphertextData
+    try {
+      data = JSON.parse(ciphertext)
+    } catch {
+      throw new BDPParameterError('Invalid ciphertext.')
+    }
+    if (typeof data !== 'object' || data.encryptedEphemeralKey === undefined || data.recipientKeyId === undefined || data.encryptedValue === undefined) {
+      throw new BDPParameterError('Invalid ciphertext.')
+    }
+    if (data.recipientKeyId !== recipientKeyId) {
+      throw new BDPParameterError('The ciphertext\'s recipient does not match this field\'s recipient.')
+    }
+
+    let serializedEphemeralKey: string
+    if (data.encryptedEphemeralKey[ownKeyPair.keyId] !== undefined) {
+      serializedEphemeralKey = await this.#decryptRSA(data.encryptedEphemeralKey[ownKeyPair.keyId], ownKeyPair.privateKey)
+    } else {
+      // TODO: support recipient decryption within BDP.
+      throw new BDPParameterError('No decryption key is available for this recipient encryption.')
+    }
+    const ephemeralKey = await deserializeValue(JSON.parse(serializedEphemeralKey)) as SymmetricKey
+
+    return [ownKeyPair, await this.#decryptAES(data.encryptedValue, ephemeralKey, origin)]
   }
   async getOriginKeyPair(origin: string): Promise<RecipientKey> {
     let keyPair = this.#perOriginKeyPairs[origin]
