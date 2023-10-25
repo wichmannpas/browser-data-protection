@@ -8,9 +8,13 @@ export const keyTypes = [
   ['recipient', 'Recipient', 'recipient', 'A key that is shared/received with a specific user. Only the key owner (who knows the so-called private key) can decrypt values encrypted with this key. Other users can only encrypt values for this key.'],
 ]
 
+export type KeyId = string
+export type Ciphertext = object
+export type EncodedCiphertext = string
+
 // Keys are a regular object following a StoredKey interface, which makes them easily serializable and deserializable for storage.local.
 export interface StoredKey {
-  keyId: string
+  keyId: KeyId
   shortDescription: string
   created: Date
   lastUsed: null | Date
@@ -40,7 +44,7 @@ export function isRecipientKey(key: StoredKey): key is RecipientKey {
 }
 
 export interface KeyAgreementKeyPair {
-  keyId: string
+  keyId: KeyId
   publicKey: CryptoKey
   privateKey?: CryptoKey
   origin: string
@@ -52,14 +56,17 @@ export class DisallowedKeyError extends BDPParameterError { }
 export class InvalidCiphertextError extends BDPParameterError { }
 
 interface CiphertextData {
-  keyId: string
+  keyId: KeyId
   iv: string
-  ciphertext: string
+  ciphertext: EncodedCiphertext
 }
 interface PasswordKeyCiphertextData extends CiphertextData {
   salt: string
 }
-interface RecipientCiphertextData extends CiphertextData {
+interface RecipientCiphertextData {
+  encryptedEphemeralKey: { [key: KeyId]: EncodedCiphertext }
+  recipientKeyId: KeyId
+  encryptedValue: CiphertextData
 }
 
 export default class KeyStore {
@@ -69,12 +76,16 @@ export default class KeyStore {
   #passwordKeys: { [key: string]: PasswordKey }
   #recipientKeys: { [key: string]: RecipientKey }
   #keyAgreementKeyPairs: { [key: string]: KeyAgreementKeyPair }
+  // per-origin key pair are auto-managed and not manageble by the user. They are used to sign recipient encryption values and to store an additional copy of the ephemeral session key in ciphertext data to allow decryption for the sender as well.
+  // The key id of these is displayed to the user to allow verification of the key authenticity if this value is provided via an external secure channel to the recipient.
+  #perOriginKeyPairs: { [key: string]: RecipientKey }
 
   constructor() {
     this.#passwordKeys = reactive(Object.create(null))
     this.#symmetricKeys = reactive(Object.create(null))
     this.#recipientKeys = reactive(Object.create(null))
     this.#keyAgreementKeyPairs = reactive(Object.create(null))
+    this.#perOriginKeyPairs = reactive(Object.create(null))
   }
 
   static getKeyStore(): KeyStore {
@@ -156,7 +167,7 @@ export default class KeyStore {
     await this.#save()
     return true
   }
-  async generateSymmetricKey(shortDescription: string, allowedOrigins: string[], distributionMode: SymmetricKey['distributionMode']): Promise<SymmetricKey> {
+  async generateSymmetricKey(shortDescription: string, allowedOrigins: string[], distributionMode: SymmetricKey['distributionMode'], store = true): Promise<SymmetricKey> {
     const key = await crypto.subtle.generateKey(
       {
         name: 'AES-GCM',
@@ -175,8 +186,10 @@ export default class KeyStore {
       key,
       distributionMode,
     }
-    this.#symmetricKeys[keyObj.keyId] = keyObj
-    await this.#save()
+    if (store) {
+      this.#symmetricKeys[keyObj.keyId] = keyObj
+      await this.#save()
+    }
     return keyObj
   }
   async encryptWithSymmetricKey(plaintext: string, key: SymmetricKey, origin: string): Promise<string> {
@@ -337,7 +350,7 @@ export default class KeyStore {
    * Generate a recipient key pair.
    * This uses the 'external' distribution mode.
    */
-  async generateRecipientKey(shortDescription: string, allowedOrigins: string[]): Promise<RecipientKey> {
+  async generateRecipientKey(shortDescription: string, allowedOrigins: string[], store = true): Promise<RecipientKey> {
     const keyPair = await crypto.subtle.generateKey(
       {
         name: 'RSA-OAEP',
@@ -358,14 +371,50 @@ export default class KeyStore {
       privateKey: keyPair.privateKey,
       publicKey: keyPair.publicKey,
     }
-    this.#recipientKeys[keyObj.keyId] = keyObj
-    await this.#save()
+    if (store) {
+      this.#recipientKeys[keyObj.keyId] = keyObj
+      await this.#save()
+    }
     return keyObj
   }
-  async encryptWithRecipientKey(plaintext: string, key: RecipientKey, origin: string): Promise<string> {
-    const data = await crypto.subtle.encrypt()
-    data.salt = key.salt
-    return JSON.stringify(data)
+  async #encryptRSA(plaintext: string, publicKey: CryptoKey): Promise<EncodedCiphertext> {
+    const ciphertext = await crypto.subtle.encrypt(
+      {
+        name: 'RSA-OAEP',
+      },
+      publicKey,
+      new TextEncoder().encode(plaintext),
+    )
+    return bufferToBase64(ciphertext)
+  }
+  async encryptWithRecipientKey(plaintext: string, recipientKey: RecipientKey, origin: string): Promise<string> {
+    // load own key pair used for this origin
+    const ownKeyPair = await this.getOriginKeyPair(origin)
+
+    const ephemeralKey = await this.generateSymmetricKey('', [origin], 'external', false)
+    const serializedEphemeralKey = JSON.stringify(await serializeKey(ephemeralKey.key))
+    const encryptedValue = await this.#encryptAES(plaintext, ephemeralKey, origin)
+    const encryptedEphemeralKey = Object.create(null)
+    encryptedEphemeralKey[recipientKey.keyId] = await this.#encryptRSA(serializedEphemeralKey, recipientKey.publicKey)
+    encryptedEphemeralKey[ownKeyPair.keyId] = await this.#encryptRSA(serializedEphemeralKey, ownKeyPair.publicKey)
+
+    const ciphertextData: RecipientCiphertextData = {
+      encryptedEphemeralKey,
+      recipientKeyId: recipientKey.keyId,
+      encryptedValue,
+    }
+    return JSON.stringify(ciphertextData)
+  }
+  async getOriginKeyPair(origin: string): Promise<RecipientKey> {
+    let keyPair = this.#perOriginKeyPairs[origin]
+    if (keyPair !== undefined) {
+      return keyPair
+    }
+    // generate a new key pair
+    keyPair = await this.generateRecipientKey('', [origin], false)
+    this.#perOriginKeyPairs[origin] = keyPair
+    await this.#save()
+    return keyPair
   }
 
   /**
@@ -481,6 +530,7 @@ export default class KeyStore {
       'passwordKeys',
       'recipientKeys',
       'keyAgreementKeyPairs',
+      'perOriginKeyPairs',
     ])
 
     if (storedData.passwordKeys !== undefined) {
@@ -506,6 +556,12 @@ export default class KeyStore {
     } else {
       Object.keys(this.#keyAgreementKeyPairs).forEach(key => delete this.#keyAgreementKeyPairs[key])
     }
+
+    if (storedData.perOriginKeyPairs !== undefined) {
+      Object.assign(this.#perOriginKeyPairs, await deserializeValues(storedData.perOriginKeyPairs))
+    } else {
+      Object.keys(this.#perOriginKeyPairs).forEach(key => delete this.#perOriginKeyPairs[key])
+    }
   }
 
   /**
@@ -517,6 +573,7 @@ export default class KeyStore {
       symmetricKeys: await serializeValues(toRaw(this.#symmetricKeys)),
       recipientKeys: await serializeValues(toRaw(this.#recipientKeys)),
       keyAgreementKeyPairs: await serializeValues(toRaw(this.#keyAgreementKeyPairs)),
+      perOriginKeyPairs: await serializeValues(toRaw(this.#perOriginKeyPairs)),
     })
   }
 }
