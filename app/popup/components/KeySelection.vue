@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PropType, computed, ref } from 'vue'
+import { PropType, computed, onBeforeMount, ref } from 'vue'
 import InternalProtectedField from '../../scripts/InternalProtectedField'
 import KeyStore, { SymmetricKey } from '../../scripts/KeyStore'
 import { ProtectedFieldOptions } from '../../scripts/ProtectedFieldOptions'
@@ -18,6 +18,12 @@ const props = defineProps({
 })
 
 const deriveNewKey = ref(false)
+
+onBeforeMount(() => {
+  if (props.field.othersPublicKey !== undefined || props.field.ownPublicKeyId !== undefined) {
+    deriveNewKey.value = true
+  }
+})
 
 const selectableKeys = computed(() => {
   switch (props.field.options.protectionMode) {

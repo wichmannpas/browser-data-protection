@@ -70,22 +70,3 @@ chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.Messa
       throw new Error(`Unknown operation: ${message.operation}`)
   }
 })
-
-// debug: add link to popup in new tab
-addEventListener('DOMContentLoaded', () => {
-  const button = document.createElement('button')
-  button.innerText = 'DEBUG: Open popup in new tab'
-  button.addEventListener('click', () => {
-    chrome.runtime.sendMessage({
-      context: 'bdp',
-      operation: 'openPopupInNewTab',
-    })
-  })
-  document.body.appendChild(button)
-  // DEBUG: open tab immediately
-  return
-  chrome.runtime.sendMessage({
-    context: 'bdp',
-    operation: 'openPopupInNewTab',
-  })
-})
