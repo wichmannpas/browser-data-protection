@@ -43,6 +43,8 @@ async function deriveKey() {
   const key = await props.keyStore.deriveSymmetricKeyFromKeyAgreement(generatedKey.value, props.field.othersPublicKey, props.field.origin)
   derivedKeyId.value = key.keyId
   deriveKeyLoading.value = false
+  props.field.othersPublicKey = undefined
+  props.field.ownPublicKeyId = undefined
 
   emit('keyGenerated', key)
 }
