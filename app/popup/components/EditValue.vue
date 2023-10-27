@@ -227,8 +227,8 @@ function clearField() {
           <strong>
             Used key<template v-if="field.options.protectionMode === 'recipient'"> (<em>of recipient</em>)</template>:
           </strong>
-          <span class="key-id">{{ usedKey.keyId }}</span>
-          ({{ usedKey.shortDescription }})
+          <span class="key-id">{{ usedKey!.keyId }}</span>
+          ({{ usedKey!.shortDescription }})
           <template v-if="field.options.protectionMode === 'recipient'">
             <br />
             <strong>
