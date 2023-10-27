@@ -88,11 +88,17 @@ export async function serializeValue(value: object): Promise<object> {
   if ('key' in result) {
     result.key = await serializeKey(result.key)
   }
-  if ('privateKey' in result) {
+  if (result.privateKey !== undefined) {
     result.privateKey = await serializeKey(result.privateKey)
   }
-  if ('publicKey' in result) {
+  if (result.publicKey !== undefined) {
     result.publicKey = await serializeKey(result.publicKey)
+  }
+  if ('signingKeyPair' in result) {
+    result.signingKeyPair = await serializeValue(result.signingKeyPair)
+  }
+  if ('encryptionKeyPair' in result) {
+    result.encryptionKeyPair = await serializeValue(result.encryptionKeyPair)
   }
 
   return result
@@ -114,11 +120,18 @@ export async function deserializeValue(value: object): Promise<object> {
   if ('key' in result) {
     result.key = await deserializeKey(result.key)
   }
-  if ('privateKey' in result) {
+  if (result.privateKey !== undefined) {
     result.privateKey = await deserializeKey(result.privateKey)
   }
-  if ('publicKey' in result) {
+  if (result.publicKey !== undefined) {
     result.publicKey = await deserializeKey(result.publicKey)
+  }
+
+  if ('signingKeyPair' in result) {
+    result.signingKeyPair = await deserializeValue(result.signingKeyPair)
+  }
+  if ('encryptionKeyPair' in result) {
+    result.encryptionKeyPair = await deserializeValue(result.encryptionKeyPair)
   }
 
   return result

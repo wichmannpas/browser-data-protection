@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PropType, Ref, computed, ref, watch } from 'vue'
+import { PropType, Ref, computed, ref, toRaw, watch } from 'vue'
 import KeyStore, { RecipientKey, StoredKey, SymmetricKey, isPasswordKey, isRecipientKey } from '../../scripts/KeyStore';
 import zxcvbn from 'zxcvbn';
 import PasswordStrength from './PasswordStrength.vue';
@@ -43,7 +43,10 @@ async function exportKey(key: SymmetricKey) {
 async function exportPublicKey(key: RecipientKey) {
   exportKeyLoading.value = true
 
-  exportedKey.value = btoa(JSON.stringify(await serializeValue(key)))
+  const keyWithoutPrivate = Object.assign(Object.create(null), toRaw(key))
+  keyWithoutPrivate.signingKeyPair.privateKey = undefined
+  keyWithoutPrivate.encryptionKeyPair.privateKey = undefined
+  exportedKey.value = btoa(JSON.stringify(await serializeValue(keyWithoutPrivate)))
   exportKeyLoading.value = false
 }
 
@@ -62,7 +65,7 @@ function deleteKey(key: StoredKey | RecipientKey) {
     if (!confirm(`Do you really want to PERMANENTLY DELETE the key with the id ${key.keyId}? You will not be able to view or update any values that use this key.`)) {
       return
     }
-    if (!isRecipientKey(key) || key.privateKey !== null) {
+    if (!isRecipientKey(key) || key.signingKeyPair.privateKey !== undefined) {
       if (!confirm(`Asking again: Do you want to PERMANENTLY DELETE the key with the id ${key.keyId}? The operation cannot be undone. Unless the key has been shared with another device or user, it will not be possible to regain access to the values protected with it.`)) {
         return
       }
@@ -75,6 +78,9 @@ function deleteKey(key: StoredKey | RecipientKey) {
       break
     case 'password':
       props.keyStore.deletePasswordKey(key.keyId)
+      break
+    case 'recipient':
+      props.keyStore.deleteRecipientKey(key.keyId)
       break
     default:
       throw new Error(`unsupported key type ${props.keyType} for key deletion`)

@@ -75,11 +75,15 @@ async function loadCiphertext() {
           }
           break
         case 'recipient':
-          if (props.field.options.recipientPublicKey === undefined) {
+          if (props.field.options.distributionMode === 'direct-plain' && props.field.options.recipientPublicKey === undefined) {
             throw new Error('no recipient public key provided')
           }
+          let usedRecipientKeyId: KeyId | undefined = undefined
+          if (usedKey.value !== null) {
+            usedRecipientKeyId = (usedKey.value as RecipientKey).keyId
+          }
           let usedDecryptionKey: RecipientKey
-          [usedDecryptionKey, plaintext] = await keyStore.decryptWithRecipientKey(props.field.ciphertextValue, props.field.origin, (usedKey.value as RecipientKey).keyId)
+          [usedDecryptionKey, plaintext] = await keyStore.decryptWithRecipientKey(props.field.ciphertextValue, props.field.origin, usedRecipientKeyId)
           senderRecipientKeyId.value = usedDecryptionKey.keyId
           break
         default:
@@ -230,7 +234,7 @@ function clearField() {
             </strong>
             <template v-if="senderRecipientKeyId !== null">
               <span class="key-id">{{ senderRecipientKeyId }}</span>
-              Provide this key id to the recipient to allow them to verify the key integrity of the received encryption.
+              Provide this key id to the recipient to allow them to verify the key integrity of the received value.
             </template>
             <template v-else>
               <em>None yet. Encrypt a value to display your key.</em>
@@ -277,7 +281,7 @@ function clearField() {
     <div v-else class="toast toast-error">
       <strong v-if="!errorKeyMissing">The web application provided an invalid ciphertext.</strong>
       {{ errorMessage }}
-      If the key was shared with you, you can import the key in the <a href="#" @click="activeView = 'manage-keys'">key
+      If the required key was shared with you, you can import it in the <a href="#" @click="activeView = 'manage-keys'">key
         manager</a>.
     </div>
   </div>

@@ -11,6 +11,7 @@ export const keyTypes = [
 export type KeyId = string
 export type Ciphertext = object
 export type EncodedCiphertext = string
+export type EncodedValueAndSignature = string
 
 // Keys are a regular object following a StoredKey interface, which makes them easily serializable and deserializable for storage.local.
 export interface StoredKey {
@@ -35,12 +36,27 @@ export function isPasswordKey(key: StoredKey): key is PasswordKey {
   return 'salt' in key
 }
 
+/**
+ * The recipient key consists of a signing key pair (ECDSA) and an encryption key pair (RSA-OAEP).
+ * The keyId of the RecipientKey is that of the signing key pair, which is the main key pair.
+ * To prevent forging of the encryption key, a signature of the encryption key pair's public key is provided under the signing key pair.
+ * It must always be verified that the key pair is consistent, i.e., that BOTH the key id of the key pair matches the derived key id from the
+ * signing key pair AND the signature is valid for the key id newly derived from the encryption key pair's public key.
+ * Both validations are necessary to prevent an attacker from providing a recipient key with a key id that is inconsistent with the actual signing key.
+ */
 export interface RecipientKey extends StoredKey {
-  privateKey: CryptoKey
-  publicKey: CryptoKey
+  signingKeyPair: {
+    privateKey?: CryptoKey
+    publicKey: CryptoKey
+  }
+  encryptionKeyPair: {
+    privateKey?: CryptoKey
+    publicKey: CryptoKey
+    signature: EncodedValueAndSignature
+  }
 }
 export function isRecipientKey(key: StoredKey): key is RecipientKey {
-  return 'privateKey' in key
+  return 'signingKeyPair' in key
 }
 
 export interface KeyAgreementKeyPair {
@@ -65,6 +81,7 @@ interface PasswordKeyCiphertextData extends CiphertextData {
 }
 interface RecipientCiphertextData {
   encryptedEphemeralKey: { [key: KeyId]: EncodedCiphertext }
+  signedEphemeralKeyId: EncodedValueAndSignature
   recipientKeyId: KeyId
   encryptedValue: CiphertextData
 }
@@ -346,12 +363,52 @@ export default class KeyStore {
   getRecipientKeyCount(): number {
     return Object.keys(this.#recipientKeys).length
   }
-  /**
-   * Generate a recipient key pair.
-   * This uses the 'external' distribution mode.
-   */
+  async #signECDSA(value: string, privateKey: CryptoKey): Promise<EncodedValueAndSignature> {
+    const signature = await crypto.subtle.sign(
+      {
+        name: 'ECDSA',
+        hash: {
+          name: 'SHA-512',
+        }
+      },
+      privateKey,
+      new TextEncoder().encode(value),
+    )
+    return JSON.stringify({
+      value,
+      signature: bufferToBase64(signature),
+    })
+  }
+  async #verifyECDSA(value: EncodedValueAndSignature, publicKey: CryptoKey): Promise<[string | undefined, boolean]> {
+    try {
+      const val: { value: string, signature: string } = JSON.parse(value)
+      const result = await crypto.subtle.verify(
+        {
+          name: 'ECDSA',
+          hash: {
+            name: 'SHA-512',
+          }
+        },
+        publicKey,
+        bufferFromBase64(val.signature),
+        new TextEncoder().encode(val.value),
+      )
+      return [val.value, result]
+    } catch (e) {
+      console.warn(e)
+      return [undefined, false]
+    }
+  }
   async generateRecipientKey(shortDescription: string, allowedOrigins: string[], store = true): Promise<RecipientKey> {
-    const keyPair = await crypto.subtle.generateKey(
+    const signingKeyPair = await crypto.subtle.generateKey(
+      {
+        name: 'ECDSA',
+        namedCurve: 'P-521',
+      },
+      true,
+      ['sign', 'verify'],
+    )
+    const encryptionKeyPair = await crypto.subtle.generateKey(
       {
         name: 'RSA-OAEP',
         modulusLength: 4096,
@@ -362,20 +419,31 @@ export default class KeyStore {
       ['encrypt', 'decrypt'],
     )
     const keyObj: RecipientKey = {
-      keyId: await deriveKeyId(keyPair.publicKey),
+      keyId: await deriveKeyId(signingKeyPair.publicKey),
+      signingKeyPair: {
+        privateKey: signingKeyPair.privateKey,
+        publicKey: signingKeyPair.publicKey,
+      },
+      encryptionKeyPair: {
+        privateKey: encryptionKeyPair.privateKey,
+        publicKey: encryptionKeyPair.publicKey,
+        signature: await this.#signECDSA(await deriveKeyId(encryptionKeyPair.publicKey), signingKeyPair.privateKey),
+      },
       shortDescription,
       created: new Date(),
       lastUsed: null,
       allowedOrigins,
       previouslyUsedOnOrigins: [],
-      privateKey: keyPair.privateKey,
-      publicKey: keyPair.publicKey,
     }
     if (store) {
       this.#recipientKeys[keyObj.keyId] = keyObj
       await this.#save()
     }
     return keyObj
+  }
+  async deleteRecipientKey(keyId: string) {
+    delete this.#recipientKeys[keyId]
+    await this.#save()
   }
   async #encryptRSA(plaintext: string, publicKey: CryptoKey): Promise<EncodedCiphertext> {
     const ciphertext = await crypto.subtle.encrypt(
@@ -397,6 +465,20 @@ export default class KeyStore {
     )
     return new TextDecoder().decode(plaintextBuffer)
   }
+  async #validateRecipientKeyPair(keyPair: RecipientKey): Promise<boolean> {
+    // check that keyId of this key pair is indeed the derived key id from the signing key's public key
+    if (keyPair.keyId !== await deriveKeyId(keyPair.signingKeyPair.publicKey)) {
+      return false
+    }
+
+    // check that key pair's encryption key has a valid signature
+    const [signedKeyId, valid] = await this.#verifyECDSA(keyPair.encryptionKeyPair.signature, keyPair.signingKeyPair.publicKey)
+    if (signedKeyId !== await deriveKeyId(keyPair.encryptionKeyPair.publicKey) || valid !== true) {
+      return false
+    }
+
+    return true
+  }
   async encryptWithRecipientKey(plaintext: string, recipientKey: RecipientKey, origin: string): Promise<[RecipientKey, EncodedCiphertext]> {
     // load own key pair used for this origin
     const ownKeyPair = await this.getOriginKeyPair(origin)
@@ -404,20 +486,31 @@ export default class KeyStore {
     const ephemeralKey = await this.generateSymmetricKey('', [origin], 'external', false)
     const serializedEphemeralKey = JSON.stringify(await serializeValue(ephemeralKey))
     const encryptedValue = await this.#encryptAES(plaintext, ephemeralKey, origin)
-    const encryptedEphemeralKey = Object.create(null)
-    encryptedEphemeralKey[recipientKey.keyId] = await this.#encryptRSA(serializedEphemeralKey, recipientKey.publicKey)
-    encryptedEphemeralKey[ownKeyPair.keyId] = await this.#encryptRSA(serializedEphemeralKey, ownKeyPair.publicKey)
 
-    // TODO: add signature of sender!
+    const signedEphemeralKeyId = await this.#signECDSA(await deriveKeyId(ephemeralKey.key), ownKeyPair.signingKeyPair.privateKey!)
+
+    const encryptedEphemeralKey = Object.create(null);
+    const keyPairsToEncryptFor = [recipientKey, ownKeyPair]
+    for (let i = 0; i < keyPairsToEncryptFor.length; i++) {
+      const keyPair = keyPairsToEncryptFor[i]
+
+      if (await this.#validateRecipientKeyPair(keyPair) !== true) {
+        throw new BDPParameterError(`Signature of recipient key ${keyPair.keyId} is invalid.`)
+      }
+
+      // validation was successful, encrypt ephemeral key for this recipient.
+      encryptedEphemeralKey[keyPair.keyId] = await this.#encryptRSA(serializedEphemeralKey, keyPair.encryptionKeyPair.publicKey)
+    }
 
     const ciphertextData: RecipientCiphertextData = {
       encryptedEphemeralKey,
+      signedEphemeralKeyId,
       recipientKeyId: recipientKey.keyId,
       encryptedValue,
     }
     return [ownKeyPair, JSON.stringify(ciphertextData)]
   }
-  async decryptWithRecipientKey(ciphertext: string, origin: string, recipientKeyId: KeyId): Promise<[RecipientKey, string]> {
+  async decryptWithRecipientKey(ciphertext: string, origin: string, recipientKeyId?: KeyId): Promise<[RecipientKey, string]> {
     // load own key pair used for this origin
     const ownKeyPair = await this.getOriginKeyPair(origin)
 
@@ -430,18 +523,24 @@ export default class KeyStore {
     if (typeof data !== 'object' || data.encryptedEphemeralKey === undefined || data.recipientKeyId === undefined || data.encryptedValue === undefined) {
       throw new BDPParameterError('Invalid ciphertext.')
     }
-    if (data.recipientKeyId !== recipientKeyId) {
+    if (recipientKeyId !== undefined && data.recipientKeyId !== recipientKeyId) {
       throw new BDPParameterError('The ciphertext\'s recipient does not match this field\'s recipient.')
     }
 
     let serializedEphemeralKey: string
     if (data.encryptedEphemeralKey[ownKeyPair.keyId] !== undefined) {
-      serializedEphemeralKey = await this.#decryptRSA(data.encryptedEphemeralKey[ownKeyPair.keyId], ownKeyPair.privateKey)
+      serializedEphemeralKey = await this.#decryptRSA(data.encryptedEphemeralKey[ownKeyPair.keyId], ownKeyPair.encryptionKeyPair.privateKey!)
     } else {
       // TODO: support recipient decryption within BDP.
       throw new BDPParameterError('No decryption key is available for this recipient encryption.')
     }
     const ephemeralKey = await deserializeValue(JSON.parse(serializedEphemeralKey)) as SymmetricKey
+
+    // validate sender signature
+    const [signedEphemeralKeyId, valid] = await this.#verifyECDSA(data.signedEphemeralKeyId, ownKeyPair.signingKeyPair.publicKey)
+    if (valid !== true || signedEphemeralKeyId != await deriveKeyId(ephemeralKey.key)) {
+      throw new BDPParameterError('Ciphertext has an invalid signature.')
+    }
 
     return [ownKeyPair, await this.#decryptAES(data.encryptedValue, ephemeralKey, origin)]
   }
@@ -454,6 +553,9 @@ export default class KeyStore {
     keyPair = await this.generateRecipientKey('', [origin], false)
     this.#perOriginKeyPairs[origin] = keyPair
     await this.#save()
+    if (keyPair.signingKeyPair.privateKey === undefined) {
+      throw new BDPParameterError('own (origin) key pair is invalid, misses private key.')
+    }
     return keyPair
   }
 
