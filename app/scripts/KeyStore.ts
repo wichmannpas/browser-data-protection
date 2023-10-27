@@ -1,5 +1,5 @@
 import { reactive, toRaw } from 'vue'
-import { bufferFromBase64, bufferToBase64, deriveKeyId, deserializeKey, deserializeValue, deserializeValues, serializeKey, serializeValue, serializeValues } from './utils'
+import { SerializedKey, bufferFromBase64, bufferToBase64, deriveKeyId, deserializeKey, deserializeValue, deserializeValues, serializeKey, serializeValue, serializeValues } from './utils'
 
 export const keyTypes = [
   // [keyType, keyText, keyTextAdjective (used with the word "key" appended), keyDescription]
@@ -82,6 +82,8 @@ interface PasswordKeyCiphertextData extends CiphertextData {
 interface RecipientCiphertextData {
   encryptedEphemeralKey: { [key: KeyId]: EncodedCiphertext }
   signedEphemeralKeyId: EncodedValueAndSignature
+  senderSigningPublicKey: SerializedKey
+  senderKeyId: KeyId
   recipientKeyId: KeyId
   encryptedValue: CiphertextData
 }
@@ -507,7 +509,10 @@ export default class KeyStore {
       const keyPair = keyPairsToEncryptFor[i]
 
       if (await this.#validateRecipientKeyPair(keyPair) !== true) {
-        throw new BDPParameterError(`Signature of recipient key ${keyPair.keyId} is invalid.`)
+        throw new BDPParameterError(`Key pair ${keyPair.keyId} is invalid.`)
+      }
+      if (!keyPair.allowedOrigins.includes(origin) && !keyPair.allowedOrigins.includes('*')) {
+        throw new BDPParameterError(`Key pair ${keyPair.keyId} is not allowed for this origin ${origin}.`)
       }
 
       // validation was successful, encrypt ephemeral key for this recipient.
@@ -517,14 +522,17 @@ export default class KeyStore {
     const ciphertextData: RecipientCiphertextData = {
       encryptedEphemeralKey,
       signedEphemeralKeyId,
+      senderSigningPublicKey: await serializeKey(ownKeyPair.signingKeyPair.publicKey),
+      senderKeyId: ownKeyPair.keyId,
       recipientKeyId: recipientKey.keyId,
       encryptedValue,
     }
     return [ownKeyPair, JSON.stringify(ciphertextData)]
   }
-  async decryptWithRecipientKey(ciphertext: string, origin: string, recipientKeyId?: KeyId): Promise<[RecipientKey, string]> {
+  async decryptWithRecipientKey(ciphertext: string, origin: string, recipientKeyId?: KeyId): Promise<[KeyId, RecipientKey, string]> {
     // load own key pair used for this origin
     const ownKeyPair = await this.getOriginKeyPair(origin)
+    let senderSigningPublicKey: CryptoKey
 
     let data: RecipientCiphertextData
     try {
@@ -532,7 +540,7 @@ export default class KeyStore {
     } catch {
       throw new BDPParameterError('Invalid ciphertext.')
     }
-    if (typeof data !== 'object' || data.encryptedEphemeralKey === undefined || data.recipientKeyId === undefined || data.encryptedValue === undefined) {
+    if (typeof data !== 'object' || data.encryptedEphemeralKey === undefined || data.recipientKeyId === undefined || data.encryptedValue === undefined || data.senderSigningPublicKey === undefined || data.senderKeyId === undefined) {
       throw new BDPParameterError('Invalid ciphertext.')
     }
     if (recipientKeyId !== undefined && data.recipientKeyId !== recipientKeyId) {
@@ -540,21 +548,63 @@ export default class KeyStore {
     }
 
     let serializedEphemeralKey: string
+    let decryptionKeyPair: RecipientKey | undefined
     if (data.encryptedEphemeralKey[ownKeyPair.keyId] !== undefined) {
-      serializedEphemeralKey = await this.#decryptRSA(data.encryptedEphemeralKey[ownKeyPair.keyId], ownKeyPair.encryptionKeyPair.privateKey!)
+      decryptionKeyPair = ownKeyPair
     } else {
-      // TODO: support recipient decryption within BDP.
+      // check whether the required recipient key is in this key store.
+      Object.keys(data.encryptedEphemeralKey).forEach(keyId => {
+        if (this.#recipientKeys[keyId] !== undefined) {
+          decryptionKeyPair = this.#recipientKeys[keyId]
+
+          // check for private key
+          if (decryptionKeyPair.encryptionKeyPair.privateKey === undefined) {
+            decryptionKeyPair = undefined
+            return  // continue
+          }
+
+          // check for allowed origin
+          if (!decryptionKeyPair.allowedOrigins.includes(origin) && !decryptionKeyPair.allowedOrigins.includes('*')) {
+            decryptionKeyPair = undefined
+            return  // continue
+          }
+
+          return false  // break
+        }
+      })
+    }
+    if (decryptionKeyPair === undefined) {
       throw new BDPParameterError('No decryption key is available for this recipient encryption.')
     }
+    serializedEphemeralKey = await this.#decryptRSA(data.encryptedEphemeralKey[decryptionKeyPair.keyId], decryptionKeyPair.encryptionKeyPair.privateKey!)
     const ephemeralKey = await deserializeValue(JSON.parse(serializedEphemeralKey)) as SymmetricKey
 
     // validate sender signature
-    const [signedEphemeralKeyId, valid] = await this.#verifyECDSA(data.signedEphemeralKeyId, ownKeyPair.signingKeyPair.publicKey)
+    try {
+      senderSigningPublicKey = await deserializeKey(data.senderSigningPublicKey)
+    } catch {
+      throw new BDPParameterError(`The sender's public key is invalid.`)
+    }
+    if (data.senderKeyId !== await deriveKeyId(senderSigningPublicKey)) {
+      throw new BDPParameterError(`The sender's public key does not match the sender key id.`)
+    }
+    const [signedEphemeralKeyId, valid] = await this.#verifyECDSA(data.signedEphemeralKeyId, senderSigningPublicKey)
     if (valid !== true || signedEphemeralKeyId != await deriveKeyId(ephemeralKey.key)) {
       throw new BDPParameterError('Ciphertext has an invalid signature.')
     }
 
-    return [ownKeyPair, await this.#decryptAES(data.encryptedValue, ephemeralKey, origin)]
+    let recipientKey: RecipientKey
+    if (decryptionKeyPair.keyId === data.recipientKeyId) {
+      recipientKey = decryptionKeyPair
+    } else {
+      // origin is not validated here. In case the user attempts to encrypt a new value with the provided recipient key, the origin will be validated before the encryption.
+      recipientKey = this.#recipientKeys[data.recipientKeyId]
+      if (recipientKey === undefined) {
+        throw new BDPParameterError('Recipient key is not available.')
+      }
+    }
+
+    return [data.senderKeyId, recipientKey, await this.#decryptAES(data.encryptedValue, ephemeralKey, origin)]
   }
   async getOriginKeyPair(origin: string): Promise<RecipientKey> {
     let keyPair = this.#perOriginKeyPairs[origin]

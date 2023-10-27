@@ -1,3 +1,4 @@
+export type SerializedKey = { keyData: JsonWebKey, algorithm: AlgorithmIdentifier }
 /**
  * Convert a buffer to a hex string byte by byte.
  */
@@ -53,7 +54,7 @@ export async function deriveKeyId(key: CryptoKey): Promise<string> {
   return bufferToHex(hash)
 }
 
-export async function serializeKey(key: CryptoKey): Promise<object> {
+export async function serializeKey(key: CryptoKey): Promise<SerializedKey> {
   const algorithm = Object.assign(Object.create(null), key.algorithm)
   if (algorithm.publicExponent !== undefined) {
     algorithm.publicExponent = bufferToBase64(algorithm.publicExponent)
@@ -64,7 +65,7 @@ export async function serializeKey(key: CryptoKey): Promise<object> {
   }
 }
 
-export async function deserializeKey(value: { keyData: JsonWebKey, algorithm: AlgorithmIdentifier }): Promise<CryptoKey> {
+export async function deserializeKey(value: SerializedKey): Promise<CryptoKey> {
   const algorithm = Object.assign(Object.create(null), value.algorithm)
   if (algorithm.publicExponent !== undefined) {
     algorithm.publicExponent = bufferFromBase64(algorithm.publicExponent)

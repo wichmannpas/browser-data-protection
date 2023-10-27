@@ -82,9 +82,11 @@ async function loadCiphertext() {
           if (usedKey.value !== null) {
             usedRecipientKeyId = (usedKey.value as RecipientKey).keyId
           }
-          let usedDecryptionKey: RecipientKey
-          [usedDecryptionKey, plaintext] = await keyStore.decryptWithRecipientKey(props.field.ciphertextValue, props.field.origin, usedRecipientKeyId)
-          senderRecipientKeyId.value = usedDecryptionKey.keyId
+          let senderKeyId: KeyId
+          let recipientKey: RecipientKey
+          [senderKeyId, recipientKey, plaintext] = await keyStore.decryptWithRecipientKey(props.field.ciphertextValue, props.field.origin, usedRecipientKeyId)
+          senderRecipientKeyId.value = senderKeyId
+          usedKey.value = recipientKey
           break
         default:
           throw new Error(`unsupported protection mode ${props.field.options.protectionMode}`)
@@ -234,7 +236,7 @@ function clearField() {
             </strong>
             <template v-if="senderRecipientKeyId !== null">
               <span class="key-id">{{ senderRecipientKeyId }}</span>
-              Provide this key id to the recipient to allow them to verify the key integrity of the received value.
+              Provide this key id to the recipient to allow them to verify the authenticity of the key used to sign the received value.
             </template>
             <template v-else>
               <em>None yet. Encrypt a value to display your key.</em>
