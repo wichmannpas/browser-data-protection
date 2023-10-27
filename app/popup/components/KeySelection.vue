@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { PropType, computed, onBeforeMount, ref } from 'vue'
 import InternalProtectedField from '../../scripts/InternalProtectedField'
-import KeyStore, { SymmetricKey } from '../../scripts/KeyStore'
+import KeyStore, { RecipientKey, SymmetricKey } from '../../scripts/KeyStore'
 import { ProtectedFieldOptions } from '../../scripts/ProtectedFieldOptions'
 import { activeView, createKeyFor, createKeyForDistributionMode, usedKey, previouslyUsedKey } from '../../scripts/popupAppState'
 import KeyAgreement from './KeyAgreement.vue'
@@ -65,11 +65,18 @@ function navigateToCreateKey() {
     <table class="table table-striped table-hover">
       <tbody>
         <tr v-for="key in selectableKeys" @click="usedKey = key" class="c-hand"
-          :class="{ 'previous-key': previouslyUsedKey !== null && key.keyId === previouslyUsedKey.keyId }">
+          :class="{ 'previous-key': previouslyUsedKey !== null && key.keyId === previouslyUsedKey.keyId, 'own-key': field.options.protectionMode === 'recipient' && (key as RecipientKey).signingKeyPair.privateKey !== undefined }">
           <td class="previous-key-star">
             <template v-if="previouslyUsedKey !== null && key.keyId === previouslyUsedKey.keyId">
               <span class="tooltip tooltip-right" data-tooltip="This key was used for the previous value.">
                 <i class="fa-solid fa-star"></i>
+              </span>
+            </template>
+          </td>
+          <td>
+            <template  v-if="field.options.protectionMode === 'recipient' && (key as RecipientKey).signingKeyPair.privateKey !== undefined">
+              <span class="tooltip tooltip-right" data-tooltip="Own key">
+                <i class="fa-solid fa-image-portrait"></i>
               </span>
             </template>
           </td>
@@ -94,3 +101,20 @@ function navigateToCreateKey() {
     </template>
   </p>
 </template>
+
+<style scoped>
+tr.previous-key>td {
+  background: #7ebcff;
+}
+
+td.previous-key-star {
+  width: 1em;
+  text-align: center;
+}
+
+tr.own-key>td {
+  background: #f5faff;
+  color: rgb(162, 162, 162);
+  opacity: 0.8;
+}
+</style>

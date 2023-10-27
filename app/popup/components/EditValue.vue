@@ -287,14 +287,3 @@ function clearField() {
   </div>
   <div v-else class="loading loading-lg"></div>
 </template>
-
-<style scoped>
-tr.previous-key>td {
-  background: #7ebcff;
-}
-
-td.previous-key-star {
-  width: 1em;
-  text-align: center;
-}
-</style>

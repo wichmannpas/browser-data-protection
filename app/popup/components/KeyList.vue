@@ -3,7 +3,7 @@ import { PropType, Ref, computed, ref, toRaw, watch } from 'vue'
 import KeyStore, { RecipientKey, StoredKey, SymmetricKey, isPasswordKey, isRecipientKey } from '../../scripts/KeyStore';
 import zxcvbn from 'zxcvbn';
 import PasswordStrength from './PasswordStrength.vue';
-import { serializeKey, serializeValue } from '../../scripts/utils';
+import { serializeValue } from '../../scripts/utils';
 
 const props = defineProps({
   keyType: {
@@ -98,6 +98,9 @@ function deleteKey(key: StoredKey | RecipientKey) {
           <th>
             Key id
           </th>
+          <th v-if="keyType === 'recipient'" class="private-key">
+            Priv. key
+          </th>
           <th v-if="keyType === 'symmetric'">
             Distr. mode
           </th>
@@ -126,6 +129,10 @@ function deleteKey(key: StoredKey | RecipientKey) {
               </button>
             </td>
             <td class="key-id">{{ key.keyId }}</td>
+            <td v-if="keyType === 'recipient'" class="private-key">
+              <span v-if="(key as RecipientKey).signingKeyPair.privateKey === undefined" class="fa-solid fa-xmark"></span>
+              <span v-else class="fa-solid fa-check"></span>
+            </td>
             <td v-if="keyType === 'symmetric'">
               {{ (key as SymmetricKey).distributionMode }}
             </td>
@@ -250,5 +257,9 @@ function deleteKey(key: StoredKey | RecipientKey) {
 
 .exported-key-div>textarea {
   font-family: monospace;
+}
+
+.private-key {
+  text-align: center;
 }
 </style>

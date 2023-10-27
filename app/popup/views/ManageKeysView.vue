@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Ref, computed, onBeforeMount, reactive, ref, watch } from 'vue'
-import KeyStore, { BDPParameterError, SymmetricKey, keyTypes } from '../../scripts/KeyStore';
+import KeyStore, { BDPParameterError, RecipientKey, SymmetricKey, keyTypes } from '../../scripts/KeyStore';
 import KeyList from '../components/KeyList.vue';
 import { createKeyFor, createKeyForDistributionMode } from '../../scripts/popupAppState';
 import { deriveKeyId, deserializeValue } from '../../scripts/utils';
@@ -91,11 +91,49 @@ async function importKey(keyType: string) {
         // reset usage data
         unwrappedKey.lastUsed = null
         unwrappedKey.previouslyUsedOnOrigins = []
+
+        // re-derive key id to prevent forged key ids with a non-matching key to be imported
         unwrappedKey.keyId = await deriveKeyId(unwrappedKey.key)
 
         // store unwrapped key
         if (!await keyStore.addSymmetricKey(unwrappedKey as SymmetricKey)) {
           importKeyError.value = `This key (key id ${unwrappedKey.keyId}) already exists.`
+          return
+        }
+      } catch (e) {
+        if (!(e instanceof BDPParameterError)) {
+          throw e
+        }
+        console.warn(e)
+        importKeyError.value = 'The exported key value or the password is invalid.'
+        return
+      }
+
+
+      importKeyActive.value = false
+      clearImportKeyData()
+      break
+    case 'recipient':
+      let parsedKey: RecipientKey
+      try {
+        parsedKey = await deserializeValue(JSON.parse(atob(importKeyData.key))) as RecipientKey
+      } catch (e) {
+        console.warn(e)
+        importKeyError.value = 'The exported key value is invalid.'
+        return
+      }
+
+      try {
+        // reset usage data
+        parsedKey.lastUsed = null
+        parsedKey.previouslyUsedOnOrigins = []
+
+        // re-derive key id to prevent forged key ids with a non-matching key to be imported
+        parsedKey.keyId = await deriveKeyId(parsedKey.signingKeyPair.publicKey)
+
+        // store unwrapped key
+        if (!await keyStore.addRecipientKey(parsedKey)) {
+          importKeyError.value = `This key (key id ${parsedKey.keyId}) already exists.`
           return
         }
       } catch (e) {
@@ -209,7 +247,7 @@ onBeforeMount(() => {
           <hr />
         </div>
 
-        <button class="btn btn-block" v-if="activeKeyType === 'symmetric' && !importKeyActive"
+        <button class="btn btn-block" v-if="['symmetric', 'recipient'].includes(activeKeyType) && !importKeyActive"
           @click="importKeyActive = true">
           <i class="fa-solid fa-file-import"></i>
           Import an existing {{ activeKeyTypeData[2] }} key
@@ -224,7 +262,7 @@ onBeforeMount(() => {
               <textarea class="form-input monospace" placeholder="The exported key to import." rows="4"
                 v-model="importKeyData.key"></textarea>
             </label>
-            <label class="form-label">
+            <label v-if="activeKeyType === 'symmetric'" class="form-label">
               Export password
               <input type="password" class="form-input" v-model="importKeyData.password"
                 placeholder="The password provided during the export of this key." />

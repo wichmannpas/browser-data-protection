@@ -399,6 +399,18 @@ export default class KeyStore {
       return [undefined, false]
     }
   }
+  /**
+   * Adds a recipient key to the key store unless it already exists.
+   * @returns Whether the key was added or not (i.e., it existed already).
+   */
+  async addRecipientKey(key: RecipientKey): Promise<boolean> {
+    if (this.#recipientKeys[key.keyId] !== undefined) {
+      return false
+    }
+    this.#recipientKeys[key.keyId] = key
+    await this.#save()
+    return true
+  }
   async generateRecipientKey(shortDescription: string, allowedOrigins: string[], store = true): Promise<RecipientKey> {
     const signingKeyPair = await crypto.subtle.generateKey(
       {
