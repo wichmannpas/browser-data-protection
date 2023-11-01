@@ -4,6 +4,7 @@ import zxcvbn from 'zxcvbn';
 import InternalProtectedField from '../../scripts/InternalProtectedField';
 import KeyStore, { BDPParameterError } from '../../scripts/KeyStore';
 import { chosenPassword, usedKey, chosenPasswordStoreKey, reRequestedPassword, passwordReRequestError, plaintextValue, editReady, ciphertextFresh, ciphertextProvidedToWebApp, passwordReRequest } from '../../scripts/popupAppState';
+import PasswordStrength from './PasswordStrength.vue'
 
 const props = defineProps({
   field: {
@@ -69,7 +70,7 @@ async function providePassword() {
           <i class="form-icon fa-solid fa-key"></i>
         </div>
       </label>
-
+      <PasswordStrength :passwordStrength="passwordStrength" />
 
       <div class="form-group">
         <label class="form-switch">
@@ -98,8 +99,6 @@ async function providePassword() {
           <i class="form-icon fa-solid fa-key"></i>
         </div>
       </label>
-
-      <PasswordStrength :passwordStrength="passwordStrength" />
 
       <div class="form-group">
         <label class="form-switch">

@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import zxcvbn from 'zxcvbn';
-
-
-const props = defineProps({
+defineProps({
   passwordStrength: {
     type: Object,
     required: true,
