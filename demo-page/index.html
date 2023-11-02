@@ -1,404 +1,405 @@
 <!doctype html>
 <html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Demo Page for BrowserDataProtection</title>
 
-<head>
-  <meta charset="utf-8" />
-  <title>Demo Page for BrowserDataProtection</title>
+    <link rel="stylesheet" href="spectre.min.css" />
+    <style>
+      .container {
+        margin: 2em auto;
+        max-width: min(75vw, 1000px);
+      }
 
-  <link rel="stylesheet" href="spectre.min.css" />
-  <style>
-    .container {
-      margin: 2em auto;
-      max-width: min(75vw, 1000px);
-    }
+      .bdp {
+        font-variant-caps: small-caps;
+      }
 
-    .bdp {
-      font-variant-caps: small-caps;
-    }
+      .hidden {
+        display: none;
+      }
 
-    .hidden {
-      display: none;
-    }
+      .demo-field {
+        margin-top: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
 
-    .demo-field {
-      margin-top: 1em;
-    }
-  </style>
-</head>
+      <h1><span class="bdp">BrowserDataProtection</span> Demo Page</h1>
 
-<body>
-  <div class="container">
+      <p>
+        This is a simple demo page for the <span class="bdp">BrowserDataProtection</span> architecture, demonstrating
+        all
+        supported protection modes.
+        As <span class="bdp">BrowserDataProtection</span> does not support <code>file://</code> URLs, this demo needs to
+        be accessed through a web server.
+        If Python is installed on your system, the simplest way to achieve this locally is by running the following
+        command within the directory of this demo page:
+        <br />
+        <code>python3 -m http.server</code>
+        <br />
+        While this command is running, you can access this demo page at the URL <a
+          href="http://localhost:8000/">http://localhost:8000/</a>.
+      </p>
 
-    <h1><span class="bdp">BrowserDataProtection</span> Demo Page</h1>
-
-    <p>
-      This is a simple demo page for the <span class="bdp">BrowserDataProtection</span> architecture, demonstrating all
-      supported protection modes.
-      As <span class="bdp">BrowserDataProtection</span> does not support <code>file://</code> URLs, this demo needs to
-      be accessed through a web server.
-      If Python is installed on your system, the simplest way to achieve this locally is by running the following
-      command within the directory of this demo page:
-      <br />
-      <code>python3 -m http.server</code>
-      <br />
-      While this command is running, you can access this demo page at the URL <a
-        href="http://localhost:8000/">http://localhost:8000/</a>.
-    </p>
-
-    <p>
-      There is also a <a href="empty.html">blank demo page without fields</a> to demonstrate the badge of the <span
-        class="bdp">BrowserDataProtection</span> browser icon.
-    </p>
+      <p>
+        There is also a <a href="empty.html">blank demo page without fields</a> to demonstrate the badge of the <span
+          class="bdp">BrowserDataProtection</span> browser icon.
+      </p>
 
 
-    <h3>What is <span class="bdp">BrowserDataProtection</span>?</h3>
-    <p>
-      <span class="bdp">BrowserDataProtection</span> is an architecture that allows web applications to protect
-      sensitive data within the browser using encryption and digital signing.
-      The protection is performed within the browser and does not provide any plaintext or key access to the web
-      application.
-      This enables protection from attackers that have full control of the web application's servers, including threat
-      models that consider a malicious attacker.
-      <span class="bdp">BrowserDataProtection</span> is initially proposed and discussed in detail in the PhD
-      dissertation of Pascal Wichmann and it is planned to publish the architecture as a publication later on.
-    </p>
+      <h3>What is <span class="bdp">BrowserDataProtection</span>?</h3>
+      <p>
+        <span class="bdp">BrowserDataProtection</span> is an architecture that allows web applications to protect
+        sensitive data within the browser using encryption and digital signing.
+        The protection is performed within the browser and does not provide any plaintext or key access to the web
+        application.
+        This enables protection from attackers that have full control of the web application's servers, including threat
+        models that consider a malicious attacker.
+        <span class="bdp">BrowserDataProtection</span> is initially proposed and discussed in detail in the PhD
+        dissertation of Pascal Wichmann and it is planned to publish the architecture as a publication later on.
+      </p>
 
-    <h3>Demo Fields</h3>
-    For demo purposes, all fields display all ciphertexts that are received from <span
-      class="bdp">BrowserDataProtection</span> on this demo page.
-    Except for the key agreement demo, which requires another server process to be running, no data is sent by this
-    demo.
+      <h3>Demo Fields</h3>
+      For demo purposes, all fields display all ciphertexts that are received from <span
+        class="bdp">BrowserDataProtection</span> on this demo page.
+      Except for the key agreement demo, which requires another server process to be running, no data is sent by this
+      demo.
 
-    <ul class="tab tab-block">
-      <li class="tab-item active">
-        <a href="#symmetricEncryption">
-          Symmetric Encryption
-        </a>
-      </li>
-      <li class="tab-item">
-        <a href="#keyAgreement">
-          Key Agreement
-        </a>
-      </li>
-      <li class="tab-item">
-        <a href="#asymmetricEncryption">
-          Asymmetric Encryption
-        </a>
-      </li>
-    </ul>
+      <ul class="tab tab-block">
+        <li class="tab-item active">
+          <a href="#symmetricEncryption">
+            Symmetric Encryption
+          </a>
+        </li>
+        <li class="tab-item">
+          <a href="#keyAgreement">
+            Key Agreement
+          </a>
+        </li>
+        <li class="tab-item">
+          <a href="#asymmetricEncryption">
+            Asymmetric Encryption
+          </a>
+        </li>
+      </ul>
 
-    <div id="symmetricEncryption" class="tab-content">
-      The following fields demonstrate the modes that rely on symmetric encryption, i.e., the <em>symmetric</em>
-      protection mode and the <em>password</em> protection mode.
+      <div id="symmetricEncryption" class="tab-content">
+        The following fields demonstrate the modes that rely on symmetric encryption, i.e., the <em>symmetric</em>
+        protection mode and the <em>password</em> protection mode.
 
-      <div class="demo-field">
-        <p>
-          <strong>Field 1: symmetric, user-only, immediate</strong>
-          <br />
-          The ciphertext of this field is replaced by this demo web application five seconds after loading the page.
-          This demonstrates the reaction of <span class="bdp">BrowserDataProtection</span>'s popup to updated
-          ciphertexts while the popup is active and the user modifying a value.
-        </p>
-        <div id="field1"></div>
-        <code id="ciphertextField1"></code>
+        <div class="demo-field">
+          <p>
+            <strong>Field 1: symmetric, user-only, immediate</strong>
+            <br />
+            The ciphertext of this field is replaced by this demo web application five seconds after loading the page.
+            This demonstrates the reaction of <span class="bdp">BrowserDataProtection</span>'s popup to updated
+            ciphertexts while the popup is active and the user modifying a value.
+          </p>
+          <div id="field1"></div>
+          <code id="ciphertextField1"></code>
+        </div>
+
+        <div class="demo-field">
+          <strong>Field 2: symmetric, user-only, on-submit</strong>
+          <div id="field2"></div>
+        </div>
+
+        <div class="demo-field">
+          <strong>Field 3: Password key</strong>
+          <div id="field3"></div>
+          <code id="ciphertextField3"></code>
+        </div>
+
+        <div class="demo-field">
+          <strong>Field 4: symmetric, external, immediate</strong>
+          <div id="field4"></div>
+          <code id="ciphertextField4"></code>
+          Exported key (password: "f")
+          <textarea id="field4-exported-password-key" readonly rows="6"
+            class="form-input">eyJrZXlJZCI6ImZhMWM3M2E4ODY2ZGNmZDljY2ZiYWExMmIwNWNkZmRmIiwiaXYiOiIwMWRrd2tWQ3ZNZ2t2S3ZxIiwiY2lwaGVydGV4dCI6IjBCaEJDMjRnSjlvQmxablRFaEVRNnZTUXBidXV5TWJvcmduNzFKOFhVOGxkTk5QN1lCc0RzeXU0bXlNeWhwRDdFc0I1R1NGdnBEdC9JY3Y5UkRDU1FjWVhzNSs0b0VhU0YyR0owanAyOGRyMlFyQ2hpM29qamc1all2ODQwbHg4WWxoVDRlckVkZUtmd1dxcjJlTzQxOVd3ODRTbDFFMlJ5Vk9aejlPdE5kSS94TFdteENXbktSb3VCNXpXdnJ6UVk1TXJoSFFSWHY2bC9EZmJmVGhUTUZ3a3AydGd1YUo1eG95Zk5vNm1hZHhJbFppWDIvZVZpOVNIbmNobzdwVkhLNGROMy8wcU1LZzBkTGVpQXBVbktpMzY3akg4NGRkaHdpQU9kTDY3YzFsMmVzNTB0by9kRTBYL2JhR3BIZ3VUVURuR2ozeVZORjBydFNWQ3hTa0tUNktBZFdsa0tudGxJbUhwbzA2cHhqdWlkSzVQS21tTm9WRmZPdG9MQjJNa2pMckVHQ3M0YUI1a1R1M3ZpVy9acEJxa2toU3JwYTUvVVVFaTRyTUUrdU4zMzNxd0oxZm5wYU9NNXNaVjY3UTdYSFV3bUdoTkxNUUdhUnNzN3dFPSIsInNhbHQiOiI3bzlsTXVaUG1BRGE1WjBHSUFTZzVwYWVUZlFBSDRVcmhjdDVRajZpIn0=</textarea>
+        </div>
       </div>
 
-      <div class="demo-field">
-        <strong>Field 2: symmetric, user-only, on-submit</strong>
-        <div id="field2"></div>
-      </div>
-
-      <div class="demo-field">
-        <strong>Field 3: Password key</strong>
-        <div id="field3"></div>
-        <code id="ciphertextField3"></code>
-      </div>
-
-      <div class="demo-field">
-        <strong>Field 4: symmetric, external, immediate</strong>
-        <div id="field4"></div>
-        <code id="ciphertextField4"></code>
-        Exported key (password: "f")
-        <textarea id="field4-exported-password-key" readonly rows="6"
-          class="form-input">eyJrZXlJZCI6ImZhMWM3M2E4ODY2ZGNmZDljY2ZiYWExMmIwNWNkZmRmIiwiaXYiOiIwMWRrd2tWQ3ZNZ2t2S3ZxIiwiY2lwaGVydGV4dCI6IjBCaEJDMjRnSjlvQmxablRFaEVRNnZTUXBidXV5TWJvcmduNzFKOFhVOGxkTk5QN1lCc0RzeXU0bXlNeWhwRDdFc0I1R1NGdnBEdC9JY3Y5UkRDU1FjWVhzNSs0b0VhU0YyR0owanAyOGRyMlFyQ2hpM29qamc1all2ODQwbHg4WWxoVDRlckVkZUtmd1dxcjJlTzQxOVd3ODRTbDFFMlJ5Vk9aejlPdE5kSS94TFdteENXbktSb3VCNXpXdnJ6UVk1TXJoSFFSWHY2bC9EZmJmVGhUTUZ3a3AydGd1YUo1eG95Zk5vNm1hZHhJbFppWDIvZVZpOVNIbmNobzdwVkhLNGROMy8wcU1LZzBkTGVpQXBVbktpMzY3akg4NGRkaHdpQU9kTDY3YzFsMmVzNTB0by9kRTBYL2JhR3BIZ3VUVURuR2ozeVZORjBydFNWQ3hTa0tUNktBZFdsa0tudGxJbUhwbzA2cHhqdWlkSzVQS21tTm9WRmZPdG9MQjJNa2pMckVHQ3M0YUI1a1R1M3ZpVy9acEJxa2toU3JwYTUvVVVFaTRyTUUrdU4zMzNxd0oxZm5wYU9NNXNaVjY3UTdYSFV3bUdoTkxNUUdhUnNzN3dFPSIsInNhbHQiOiI3bzlsTXVaUG1BRGE1WjBHSUFTZzVwYWVUZlFBSDRVcmhjdDVRajZpIn0=</textarea>
-      </div>
-    </div>
-
-    <div id="keyAgreement" class="tab-content">
-      <div class="demo-field">
-        <strong>Field 5: symmetric, key agreement, immediate</strong>
-        <p>
-          This field demonstrates the key agreement distribution mode of <span class="bdp">BrowserDataProtection</span>,
-          which allows two parties to derive a key using the ECDH key agreement protocol over the insecure channel
-          provided by the web application.
-          This demo requires two separate browsers between which derive a key together.
-        </p>
-        <p>
-          This demo can optionally use a simple WebSocket that directly forwards messages between the two browsers.
-          Consequently, unlike expected for real-world scenarios, this demo only works when both browsers are connected
-          to the WebSocket at the same time.
-          If you do not want to use the WebSocket, you can also manually provide the public key of the other browser in
-          the input field below.
-          To start the demo WebSocket, run the following command within the directory of this demo page:
-          <br />
-          <code>
+      <div id="keyAgreement" class="tab-content">
+        <div class="demo-field">
+          <strong>Field 5: symmetric, key agreement, immediate</strong>
+          <p>
+            This field demonstrates the key agreement distribution mode of <span
+              class="bdp">BrowserDataProtection</span>,
+            which allows two parties to derive a key using the ECDH key agreement protocol over the insecure channel
+            provided by the web application.
+            This demo requires two separate browsers between which derive a key together.
+          </p>
+          <p>
+            This demo can optionally use a simple WebSocket that directly forwards messages between the two browsers.
+            Consequently, unlike expected for real-world scenarios, this demo only works when both browsers are
+            connected
+            to the WebSocket at the same time.
+            If you do not want to use the WebSocket, you can also manually provide the public key of the other browser
+            in
+            the input field below.
+            To start the demo WebSocket, run the following command within the directory of this demo page:
+            <br />
+            <code>
           python3 ./demo_websocket_server.py
         </code>
-          <br />
-          This command starts the demo WebSocket server on port 8001.
-          The demo server requires the dependency <a
-            href="https://pypi.org/project/simple-websocket-server/">simple-websocket-server from PyPi</a>.
-          You can install it with the following command:
-          <br />
-          <code>
+            <br />
+            This command starts the demo WebSocket server on port 8001.
+            The demo server requires the dependency <a
+              href="https://pypi.org/project/simple-websocket-server/">simple-websocket-server from PyPi</a>.
+            You can install it with the following command:
+            <br />
+            <code>
           pip install simple-websocket-server
         </code>
-        </p>
-        <p>
-          Before interacting with the field, you should connect to the WebSocket by clicking the button below in both
-          browsers.
-          <br />
-          <button id="key-agreement-connect" class="btn btn-primary">
-            Connect to WebSocket
-          </button>
-          <br />
-          <strong>WebSocket state:</strong> <span id="key-agreement-websocket-state">not connected</span>
-        </p>
-        <div id="field5"></div>
-        <code id="ciphertextField5"></code>
-        <code id="field5-public-key-id-display"></code>
-        <strong>
-          Public key of this browser (for copy-pasting to another browser if you want to use the manual approach):
-        </strong>
-        <textarea id="field5-public-key-display" readonly
-          placeholder="Public key generated by this browser will be displayed here." rows="6"
-          class="form-input"></textarea>
-        <p>
-          <strong>Provide a public key (of another party) for this field.</strong>
-          If you want to use this demo serverless, you can directly copy-paste the key from the display field of this
-          demo
-          page in another browser.
-          If you use the WebSocket for this demo, this manual step is not required.
-        </p>
-        <textarea id="field5-public-key-input" placeholder="Provide a public key (of another party) for this field."
-          rows="6" class="form-input"></textarea>
-        <button id="field5-public-key-submit" class="btn">Provide this public key</button>
+          </p>
+          <p>
+            Before interacting with the field, you should connect to the WebSocket by clicking the button below in both
+            browsers.
+            <br />
+            <button id="key-agreement-connect" class="btn btn-primary">
+              Connect to WebSocket
+            </button>
+            <br />
+            <strong>WebSocket state:</strong> <span id="key-agreement-websocket-state">not connected</span>
+          </p>
+          <div id="field5"></div>
+          <code id="ciphertextField5"></code>
+          <code id="field5-public-key-id-display"></code>
+          <strong>
+            Public key of this browser (for copy-pasting to another browser if you want to use the manual approach):
+          </strong>
+          <textarea id="field5-public-key-display" readonly
+            placeholder="Public key generated by this browser will be displayed here." rows="6"
+            class="form-input"></textarea>
+          <p>
+            <strong>Provide a public key (of another party) for this field.</strong>
+            If you want to use this demo serverless, you can directly copy-paste the key from the display field of this
+            demo
+            page in another browser.
+            If you use the WebSocket for this demo, this manual step is not required.
+          </p>
+          <textarea id="field5-public-key-input" placeholder="Provide a public key (of another party) for this field."
+            rows="6" class="form-input"></textarea>
+          <button id="field5-public-key-submit" class="btn">Provide this public key</button>
+        </div>
+      </div>
+
+      <div id="asymmetricEncryption" class="tab-content hidden">
+        The following fields demonstrate the asymmetric, i.e., <em>recipient</em>, protection mode of <span
+          class="bdp">BrowserDataProtection</span>.
+
+        <div class="demo-field">
+          <strong>Field 6: recipient, direct-plain, immediate</strong>
+          <div id="field6"></div>
+          <code id="ciphertextField6"></code>
+        </div>
+
+        <div class="demo-field">
+          <strong>Field 7: recipient, external, immediate</strong>
+          <div id="field7"></div>
+          <code id="ciphertextField7"></code>
+          <textarea id="field7-ciphertext-input" placeholder="Provide a ciphertext for this field." rows="6"
+            class="form-input"></textarea>
+          <button id="field7-ciphertext-submit" class="btn">Provide this ciphertext</button>
+        </div>
       </div>
     </div>
 
-    <div id="asymmetricEncryption" class="tab-content hidden">
-      The following fields demonstrate the asymmetric, i.e., <em>recipient</em>, protection mode of <span
-        class="bdp">BrowserDataProtection</span>.
+    <script type="text/javascript">
+      (async function () {
+        // Tab navigation
+        const tabContents = document.querySelectorAll('.tab-content')
+        const tabLinks = document.querySelectorAll('.tab-item a')
+        function navigateTo (target, targetTabLink) {
+          tabContents.forEach(tabContent => tabContent.classList.add('hidden'))
+          document.querySelector(target).classList.remove('hidden')
 
-      <div class="demo-field">
-        <strong>Field 6: recipient, direct-plain, immediate</strong>
-        <div id="field6"></div>
-        <code id="ciphertextField6"></code>
-      </div>
-
-      <div class="demo-field">
-        <strong>Field 7: recipient, external, immediate</strong>
-        <div id="field7"></div>
-        <code id="ciphertextField7"></code>
-        <textarea id="field7-ciphertext-input" placeholder="Provide a ciphertext for this field." rows="6"
-          class="form-input"></textarea>
-        <button id="field7-ciphertext-submit" class="btn">Provide this ciphertext</button>
-      </div>
-    </div>
-  </div>
-
-  <script type="text/javascript">
-    (async function () {
-      // Tab navigation
-      const tabContents = document.querySelectorAll('.tab-content')
-      const tabLinks = document.querySelectorAll('.tab-item a')
-      function navigateTo (target, targetTabLink) {
-        tabContents.forEach(tabContent => tabContent.classList.add('hidden'))
-        document.querySelector(target).classList.remove('hidden')
-
-        tabLinks.forEach(tabLink => tabLink.parentElement.classList.remove('active'))
-        targetTabLink.parentElement.classList.add('active')
-      }
-      tabLinks.forEach(tabLink => {
-        const target = tabLink.getAttribute('href')
-        if (window.location.hash === target) {
-          navigateTo(target, tabLink)
+          tabLinks.forEach(tabLink => tabLink.parentElement.classList.remove('active'))
+          targetTabLink.parentElement.classList.add('active')
         }
-        tabLink.addEventListener('click', () => navigateTo(target, tabLink))
-      })
+        tabLinks.forEach(tabLink => {
+          const target = tabLink.getAttribute('href')
+          if (window.location.hash === target) {
+            navigateTo(target, tabLink)
+          }
+          tabLink.addEventListener('click', () => navigateTo(target, tabLink))
+        })
 
-      // Create demo fields
-      const ciphertextField1 = document.getElementById('ciphertextField1')
-      const field1 = document.getElementById('field1')
-      const cryptoField1 = await window.browserDataProtection.createProtectedField(field1, {
-        protectionMode: 'symmetric',
-        distributionMode: 'user-only',
-        ciphertextChangedCallback (ciphertext) {
-          ciphertextField1.innerText = ciphertext
-        },
-      })
-      console.log(cryptoField1)
-      cryptoField1.setCiphertext('{"keyId":"d76800c9e5ea3ac6eebc6c5cdab7ff37","iv":"7SJzVTQiAnyZehX1","ciphertext":"a1l6OkNgazFKV3ytA/mCPIDwxvQaDXA="}')
-      setTimeout(() => {
-        cryptoField1.setCiphertext('{"keyId":"d76800c9e5ea3ac6eebc6c5cdab7ff37","iv":"d3GkEnTXzmFIfOX7","ciphertext":"Y7XVMYFxg4/x67cB9Et9U9nO"}')
-        // cryptoField1.setCiphertext(null)
-      }, 5000)
+        // Create demo fields
+        const ciphertextField1 = document.getElementById('ciphertextField1')
+        const field1 = document.getElementById('field1')
+        const cryptoField1 = await window.browserDataProtection.createProtectedField(field1, {
+          protectionMode: 'symmetric',
+          distributionMode: 'user-only',
+          ciphertextChangedCallback (ciphertext) {
+            ciphertextField1.innerText = ciphertext
+          },
+        })
+        console.log(cryptoField1)
+        cryptoField1.setCiphertext('{"keyId":"d76800c9e5ea3ac6eebc6c5cdab7ff37","iv":"7SJzVTQiAnyZehX1","ciphertext":"a1l6OkNgazFKV3ytA/mCPIDwxvQaDXA="}')
+        setTimeout(() => {
+          cryptoField1.setCiphertext('{"keyId":"d76800c9e5ea3ac6eebc6c5cdab7ff37","iv":"d3GkEnTXzmFIfOX7","ciphertext":"Y7XVMYFxg4/x67cB9Et9U9nO"}')
+          // cryptoField1.setCiphertext(null)
+        }, 5000)
 
-      const field2 = document.getElementById('field2')
-      const cryptoField2 = await window.browserDataProtection.createProtectedField(field2, {
-        protectionMode: 'symmetric',
-        distributionMode: 'user-only',
-        updateMode: 'on-submit',
-      })
-      console.log(cryptoField2)
+        const field2 = document.getElementById('field2')
+        const cryptoField2 = await window.browserDataProtection.createProtectedField(field2, {
+          protectionMode: 'symmetric',
+          distributionMode: 'user-only',
+          updateMode: 'on-submit',
+        })
+        console.log(cryptoField2)
 
-      /*
-      // DEBUG
-      function clickFieldAndTimeout (fieldA, fieldB) {
-        fieldA.click()
-        setTimeout(() => clickFieldAndTimeout(fieldB, fieldA), 3000)
-      }
-      setTimeout(() => clickFieldAndTimeout(field1, field2), 50)
-      */
-
-      const ciphertextField3 = document.getElementById('ciphertextField3')
-      const field3 = document.getElementById('field3')
-      const cryptoField3 = await window.browserDataProtection.createProtectedField(field3, {
-        protectionMode: 'password',
-        updateMode: 'on-submit',
-        ciphertextChangedCallback (ciphertext) {
-          ciphertextField3.innerText = ciphertext
-        },
-      })
-      cryptoField3.setCiphertext('{"keyId":"81f06e43e9acdf47b0db0edefd2e903f","iv":"a/jMS4UnWiccKK7o","ciphertext":"ASq3UMIUwE5/pOKlC8T65h7r/xI=","salt":"qrnmFOnTTbmvQ+Tt5xEKTuXwIxUmDE/58HPXhZmf"}')
-      console.log(cryptoField3)
-
-      const ciphertextField4 = document.getElementById('ciphertextField4')
-      const field4 = document.getElementById('field4')
-      const cryptoField4 = await window.browserDataProtection.createProtectedField(field4, {
-        protectionMode: 'symmetric',
-        distributionMode: 'external',
-        updateMode: 'immediate',
-        ciphertextChangedCallback (ciphertext) {
-          ciphertextField4.innerText = ciphertext
-        },
-      })
-      cryptoField4.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b652e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
-      console.log(cryptoField4)
-
-      // key agreement
-      // WebSocket handling
-      const wsStateElem = document.getElementById('key-agreement-websocket-state')
-      const wsConnectButton = document.getElementById('key-agreement-connect')
-      const ciphertextField5 = document.getElementById('ciphertextField5')
-      const field5 = document.getElementById('field5')
-      const field5KeyDisplay = document.getElementById('field5-public-key-display')
-      const field5KeyIdDisplay = document.getElementById('field5-public-key-id-display')
-      const field5KeyInput = document.getElementById('field5-public-key-input')
-      const field5KeySubmit = document.getElementById('field5-public-key-submit')
-      let ws = undefined
-      let cryptoField5
-      wsConnectButton.addEventListener('click', () => {
-        if (ws !== undefined) {
-          return
+        /*
+        // DEBUG
+        function clickFieldAndTimeout (fieldA, fieldB) {
+          fieldA.click()
+          setTimeout(() => clickFieldAndTimeout(fieldB, fieldA), 3000)
         }
+        setTimeout(() => clickFieldAndTimeout(field1, field2), 50)
+        */
 
-        wsConnectButton.setAttribute('disabled', 'disabled')
+        const ciphertextField3 = document.getElementById('ciphertextField3')
+        const field3 = document.getElementById('field3')
+        const cryptoField3 = await window.browserDataProtection.createProtectedField(field3, {
+          protectionMode: 'password',
+          updateMode: 'on-submit',
+          ciphertextChangedCallback (ciphertext) {
+            ciphertextField3.innerText = ciphertext
+          },
+        })
+        // cryptoField3.setCiphertext('{"keyId":"81f06e43e9acdf47b0db0edefd2e903f","iv":"a/jMS4UnWiccKK7o","ciphertext":"ASq3UMIUwE5/pOKlC8T65h7r/xI=","salt":"qrnmFOnTTbmvQ+Tt5xEKTuXwIxUmDE/58HPXhZmf"}')
+        console.log(cryptoField3)
 
-        ws = new WebSocket('ws://localhost:8001')
-        wsStateElem.innerText = 'connecting …'
-        ws.onopen = () => {
-          wsStateElem.innerText = 'connected'
-        }
-        ws.onclose = () => {
-          wsStateElem.innerText = 'closed – is demo_websocket_server.py running?'
-          ws = undefined
-          wsConnectButton.removeAttribute('disabled')
-        }
-        const observedCiphertexts = []
-        ws.onmessage = message => {
-          console.log('Received WebSocket message', message.data)
-          message = JSON.parse(message.data)
-          switch (message.operation) {
-            case 'providePublicKey':
-              cryptoField5.providePublicKey(message.publicKey)
-              field5KeyInput.value = message.publicKey
-              break
-            case 'provideNewCiphertext':
-              if (observedCiphertexts.includes(message.ciphertext)) {
+        const ciphertextField4 = document.getElementById('ciphertextField4')
+        const field4 = document.getElementById('field4')
+        const cryptoField4 = await window.browserDataProtection.createProtectedField(field4, {
+          protectionMode: 'symmetric',
+          distributionMode: 'external',
+          updateMode: 'immediate',
+          ciphertextChangedCallback (ciphertext) {
+            ciphertextField4.innerText = ciphertext
+          },
+        })
+        cryptoField4.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b652e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
+        console.log(cryptoField4)
+
+        // key agreement
+        // WebSocket handling
+        const wsStateElem = document.getElementById('key-agreement-websocket-state')
+        const wsConnectButton = document.getElementById('key-agreement-connect')
+        const ciphertextField5 = document.getElementById('ciphertextField5')
+        const field5 = document.getElementById('field5')
+        const field5KeyDisplay = document.getElementById('field5-public-key-display')
+        const field5KeyIdDisplay = document.getElementById('field5-public-key-id-display')
+        const field5KeyInput = document.getElementById('field5-public-key-input')
+        const field5KeySubmit = document.getElementById('field5-public-key-submit')
+        let ws = undefined
+        let cryptoField5
+        wsConnectButton.addEventListener('click', () => {
+          if (ws !== undefined) {
+            return
+          }
+
+          wsConnectButton.setAttribute('disabled', 'disabled')
+
+          ws = new WebSocket('ws://localhost:8001')
+          wsStateElem.innerText = 'connecting …'
+          ws.onopen = () => {
+            wsStateElem.innerText = 'connected'
+          }
+          ws.onclose = () => {
+            wsStateElem.innerText = 'closed – is demo_websocket_server.py running?'
+            ws = undefined
+            wsConnectButton.removeAttribute('disabled')
+          }
+          const observedCiphertexts = []
+          ws.onmessage = message => {
+            console.log('Received WebSocket message', message.data)
+            message = JSON.parse(message.data)
+            switch (message.operation) {
+              case 'providePublicKey':
+                cryptoField5.providePublicKey(message.publicKey)
+                field5KeyInput.value = message.publicKey
                 break
-              }
-              ciphertextField5.innerText = message.ciphertext
-              cryptoField5.setCiphertext(message.ciphertext)
-              observedCiphertexts.push(message.ciphertext)
-              break
-            default:
-              throw new Error(`invalid operation ${message.operation}`)
+              case 'provideNewCiphertext':
+                if (observedCiphertexts.includes(message.ciphertext)) {
+                  break
+                }
+                ciphertextField5.innerText = message.ciphertext
+                cryptoField5.setCiphertext(message.ciphertext)
+                observedCiphertexts.push(message.ciphertext)
+                break
+              default:
+                throw new Error(`invalid operation ${message.operation}`)
+            }
           }
-        }
-      })
-      cryptoField5 = await window.browserDataProtection.createProtectedField(field5, {
-        protectionMode: 'symmetric',
-        distributionMode: 'key-agreement',
-        updateMode: 'immediate',
-        ciphertextChangedCallback (ciphertext) {
-          ciphertextField5.innerText = ciphertext
-          if (ws !== undefined) {
-            ws.send(JSON.stringify({ operation: 'provideNewCiphertext', ciphertext }))
+        })
+        cryptoField5 = await window.browserDataProtection.createProtectedField(field5, {
+          protectionMode: 'symmetric',
+          distributionMode: 'key-agreement',
+          updateMode: 'immediate',
+          ciphertextChangedCallback (ciphertext) {
+            ciphertextField5.innerText = ciphertext
+            if (ws !== undefined) {
+              ws.send(JSON.stringify({ operation: 'provideNewCiphertext', ciphertext }))
+            }
+          },
+          publicKeyProvidedCallback (publicKey, publicKeyId) {
+            console.log('Field 5 received public key', publicKey, 'with id', publicKeyId)
+            field5KeyDisplay.value = publicKey
+            field5KeyIdDisplay.innerText = publicKeyId
+
+            if (ws !== undefined) {
+              ws.send(JSON.stringify({ operation: 'providePublicKey', publicKey, publicKeyId }))
+            }
           }
-        },
-        publicKeyProvidedCallback (publicKey, publicKeyId) {
-          console.log('Field 5 received public key', publicKey, 'with id', publicKeyId)
-          field5KeyDisplay.value = publicKey
-          field5KeyIdDisplay.innerText = publicKeyId
+        })
+        console.log(cryptoField5)
 
-          if (ws !== undefined) {
-            ws.send(JSON.stringify({ operation: 'providePublicKey', publicKey, publicKeyId }))
-          }
-        }
-      })
-      console.log(cryptoField5)
+        // manual key submission (without WebSocket)
+        field5KeySubmit.addEventListener('click', () => {
+          cryptoField5.providePublicKey(field5KeyInput.value)
+        })
 
-      // manual key submission (without WebSocket)
-      field5KeySubmit.addEventListener('click', () => {
-        cryptoField5.providePublicKey(field5KeyInput.value)
-      })
+        const ciphertextField6 = document.getElementById('ciphertextField6')
+        const field6 = document.getElementById('field6')
+        const cryptoField6 = await window.browserDataProtection.createProtectedField(field6, {
+          protectionMode: 'recipient',
+          distributionMode: 'direct-plain',
+          updateMode: 'immediate',
+          recipientPublicKey: 'eyJrZXlJZCI6IjJjN2I3ZTM4YTdhMTllNjgwYzgzNTY1MTM4NTNmMGQwIiwic2lnbmluZ0tleVBhaXIiOnsicHVibGljS2V5Ijp7ImFsZ29yaXRobSI6eyJuYW1lIjoiRUNEU0EiLCJuYW1lZEN1cnZlIjoiUC01MjEifSwia2V5RGF0YSI6eyJjcnYiOiJQLTUyMSIsImV4dCI6dHJ1ZSwia2V5X29wcyI6WyJ2ZXJpZnkiXSwia3R5IjoiRUMiLCJ4IjoiQUd5RzlydEJXSU5yaUw4MjdaRXpMN2NFRHV0TjM2cW9ZQkU2S1lsVzZHMHVHcTg2b1VBS3lva1Z5LUNheGo2bVY1VFVSRl82TFBxTEk5dEltdmlZdEY2ayIsInkiOiJBQnJqVlhldEp5bFBPRXE5b3lobEJhR1k0M2NFeWh1dHAzaEFYdkExU0dnbWRqQlNVRGY4MTF1aG9ORGRYeTVRcGo3TXJFUFV3cVZONmE5LWRlME9RU042In19fSwiZW5jcnlwdGlvbktleVBhaXIiOnsicHVibGljS2V5Ijp7ImFsZ29yaXRobSI6eyJuYW1lIjoiUlNBLU9BRVAiLCJoYXNoIjp7Im5hbWUiOiJTSEEtMjU2In0sIm1vZHVsdXNMZW5ndGgiOjQwOTYsInB1YmxpY0V4cG9uZW50IjoiQVFBQiJ9LCJrZXlEYXRhIjp7ImFsZyI6IlJTQS1PQUVQLTI1NiIsImUiOiJBUUFCIiwiZXh0Ijp0cnVlLCJrZXlfb3BzIjpbImVuY3J5cHQiXSwia3R5IjoiUlNBIiwibiI6ImtTbVRvcGx6VUdfN2V5YzVrU3Vlb1RyeFlrQUFDMHF5bkdubDZhUTFQNVJHd3dRRVR6MVlVZnlZSkNzM09PaGpnRDVoNzZzTjlPXzZhcnhuLTlzaWdpSnFqYzlCNzA2TDFRUzEyc3ZBU2NULV9rb056R2V4bXEwYTc0Skx5WGdoWndUMTE2ZFBKMlRNSEdfSW5pamtGWGN4ZVFIWmJLbTQyNFpxRHVNejZLcTFub1BMRGh6NFQ2ODc4czRRUFhyTldCc0Y5UHFBTWoxM01BdkEzcnU4bFJaaWlZTk9MVkpzYUxwa0F5T21QTzl1T0d3MUFwb0ttQWpEVTNyRVBrcFNhSXdBRDdRV0hhc3NXYzJFcVNldS0xR3JaaVNYdlRMNldoZG90aXNoamtVQ0dqT25lZUFaWkk2YmJyc2Z4bjRyeGluT0QxSFpvN3dmYmUtNWRKN0RpZl85WVNqdU1tVTN2WnhMbVFMT002eVpJemZhWWxDYjN6MmY4QlVaSnU0cjVvS2xqOGtQTm5FTzVIb2pFVWRhNm1qay1JZmtOdF82Q3YzeVJSVXJRTHdRX2J2aHN1TmVvd2tud1ItMXVzbEVUbVpGNzY3eC14MkRhRUZmbjBadTZ2cEplU2VfdWU4OWtIaGRLNEtzSFhKcXdJZmVVZmZsTFRXRFNLbEo0VFpoYkZtVDJLblFGWnhXaGFnUHE1VkNZX0ZYb0pkTklRNnZ6WGdJWndpQklwUjNmTThKUHRkb2VhZWtMSTJraWtyaEZHSjE1cE9WT05vczhZMzVYdmlUa3ZqU3lmajVYaGNySER2R3ZOSG9Obk5FM1RrNHlhREl1Vy1TTmNKTXpGM0h4NVhMT1R3TkdkUGJjWHEzRFBaQXpuNEJvRGU5MFpNTllCZkJjZm1QbWFjIn19LCJzaWduYXR1cmUiOiJ7XCJ2YWx1ZVwiOlwiMGFlMjE4ZGExN2E1MmRmZDc3NWE0N2QwM2ViY2RmYmRcIixcInNpZ25hdHVyZVwiOlwiQVB2OVBxQWpYWWdOaEhLT3FrNWl6akFoc3l5ak1JZ0F2R21vOUhGUi9SMStiM25OTUM1ZDVSUFY0REFMYndxcTFaWkxiN3RJc0FPM1NJOWpCSG9UOUZDckFYNVBmd0JvNWI3emowREEwN0drVEVjZ1FURFJTUHRyWkZpSW9jS1FSQ2FqU1BuTjdocFh4K1VISWNkZlFYNXdXdEx6WE5BTHphMkllMmRxQXR6K29GWGtcIn0ifSwic2hvcnREZXNjcmlwdGlvbiI6IlRlc3QgMiIsImNyZWF0ZWQiOjE2OTgzOTk1ODkzNDQsImxhc3RVc2VkIjpudWxsLCJhbGxvd2VkT3JpZ2lucyI6WyIqIl0sInByZXZpb3VzbHlVc2VkT25PcmlnaW5zIjpbXX0=',
+          ciphertextChangedCallback (ciphertext) {
+            ciphertextField6.innerText = ciphertext
+          },
+        })
+        // cryptoField6.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b652e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
+        console.log(cryptoField6)
 
-      const ciphertextField6 = document.getElementById('ciphertextField6')
-      const field6 = document.getElementById('field6')
-      const cryptoField6 = await window.browserDataProtection.createProtectedField(field6, {
-        protectionMode: 'recipient',
-        distributionMode: 'direct-plain',
-        updateMode: 'immediate',
-        recipientPublicKey: 'eyJrZXlJZCI6IjJjN2I3ZTM4YTdhMTllNjgwYzgzNTY1MTM4NTNmMGQwIiwic2lnbmluZ0tleVBhaXIiOnsicHVibGljS2V5Ijp7ImFsZ29yaXRobSI6eyJuYW1lIjoiRUNEU0EiLCJuYW1lZEN1cnZlIjoiUC01MjEifSwia2V5RGF0YSI6eyJjcnYiOiJQLTUyMSIsImV4dCI6dHJ1ZSwia2V5X29wcyI6WyJ2ZXJpZnkiXSwia3R5IjoiRUMiLCJ4IjoiQUd5RzlydEJXSU5yaUw4MjdaRXpMN2NFRHV0TjM2cW9ZQkU2S1lsVzZHMHVHcTg2b1VBS3lva1Z5LUNheGo2bVY1VFVSRl82TFBxTEk5dEltdmlZdEY2ayIsInkiOiJBQnJqVlhldEp5bFBPRXE5b3lobEJhR1k0M2NFeWh1dHAzaEFYdkExU0dnbWRqQlNVRGY4MTF1aG9ORGRYeTVRcGo3TXJFUFV3cVZONmE5LWRlME9RU042In19fSwiZW5jcnlwdGlvbktleVBhaXIiOnsicHVibGljS2V5Ijp7ImFsZ29yaXRobSI6eyJuYW1lIjoiUlNBLU9BRVAiLCJoYXNoIjp7Im5hbWUiOiJTSEEtMjU2In0sIm1vZHVsdXNMZW5ndGgiOjQwOTYsInB1YmxpY0V4cG9uZW50IjoiQVFBQiJ9LCJrZXlEYXRhIjp7ImFsZyI6IlJTQS1PQUVQLTI1NiIsImUiOiJBUUFCIiwiZXh0Ijp0cnVlLCJrZXlfb3BzIjpbImVuY3J5cHQiXSwia3R5IjoiUlNBIiwibiI6ImtTbVRvcGx6VUdfN2V5YzVrU3Vlb1RyeFlrQUFDMHF5bkdubDZhUTFQNVJHd3dRRVR6MVlVZnlZSkNzM09PaGpnRDVoNzZzTjlPXzZhcnhuLTlzaWdpSnFqYzlCNzA2TDFRUzEyc3ZBU2NULV9rb056R2V4bXEwYTc0Skx5WGdoWndUMTE2ZFBKMlRNSEdfSW5pamtGWGN4ZVFIWmJLbTQyNFpxRHVNejZLcTFub1BMRGh6NFQ2ODc4czRRUFhyTldCc0Y5UHFBTWoxM01BdkEzcnU4bFJaaWlZTk9MVkpzYUxwa0F5T21QTzl1T0d3MUFwb0ttQWpEVTNyRVBrcFNhSXdBRDdRV0hhc3NXYzJFcVNldS0xR3JaaVNYdlRMNldoZG90aXNoamtVQ0dqT25lZUFaWkk2YmJyc2Z4bjRyeGluT0QxSFpvN3dmYmUtNWRKN0RpZl85WVNqdU1tVTN2WnhMbVFMT002eVpJemZhWWxDYjN6MmY4QlVaSnU0cjVvS2xqOGtQTm5FTzVIb2pFVWRhNm1qay1JZmtOdF82Q3YzeVJSVXJRTHdRX2J2aHN1TmVvd2tud1ItMXVzbEVUbVpGNzY3eC14MkRhRUZmbjBadTZ2cEplU2VfdWU4OWtIaGRLNEtzSFhKcXdJZmVVZmZsTFRXRFNLbEo0VFpoYkZtVDJLblFGWnhXaGFnUHE1VkNZX0ZYb0pkTklRNnZ6WGdJWndpQklwUjNmTThKUHRkb2VhZWtMSTJraWtyaEZHSjE1cE9WT05vczhZMzVYdmlUa3ZqU3lmajVYaGNySER2R3ZOSG9Obk5FM1RrNHlhREl1Vy1TTmNKTXpGM0h4NVhMT1R3TkdkUGJjWHEzRFBaQXpuNEJvRGU5MFpNTllCZkJjZm1QbWFjIn19LCJzaWduYXR1cmUiOiJ7XCJ2YWx1ZVwiOlwiMGFlMjE4ZGExN2E1MmRmZDc3NWE0N2QwM2ViY2RmYmRcIixcInNpZ25hdHVyZVwiOlwiQVB2OVBxQWpYWWdOaEhLT3FrNWl6akFoc3l5ak1JZ0F2R21vOUhGUi9SMStiM25OTUM1ZDVSUFY0REFMYndxcTFaWkxiN3RJc0FPM1NJOWpCSG9UOUZDckFYNVBmd0JvNWI3emowREEwN0drVEVjZ1FURFJTUHRyWkZpSW9jS1FSQ2FqU1BuTjdocFh4K1VISWNkZlFYNXdXdEx6WE5BTHphMkllMmRxQXR6K29GWGtcIn0ifSwic2hvcnREZXNjcmlwdGlvbiI6IlRlc3QgMiIsImNyZWF0ZWQiOjE2OTgzOTk1ODkzNDQsImxhc3RVc2VkIjpudWxsLCJhbGxvd2VkT3JpZ2lucyI6WyIqIl0sInByZXZpb3VzbHlVc2VkT25PcmlnaW5zIjpbXX0=',
-        ciphertextChangedCallback (ciphertext) {
-          ciphertextField6.innerText = ciphertext
-        },
-      })
-      // cryptoField6.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b652e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
-      console.log(cryptoField6)
+        const ciphertextField7 = document.getElementById('ciphertextField7')
+        const field7 = document.getElementById('field7')
+        const cryptoField7 = await window.browserDataProtection.createProtectedField(field7, {
+          protectionMode: 'recipient',
+          distributionMode: 'external',
+          updateMode: 'immediate',
+          ciphertextChangedCallback (ciphertext) {
+            ciphertextField7.innerText = ciphertext
+          },
+        })
+        // cryptoField7.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b752e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
+        console.log(cryptoField7)
+        const field7CiphertextInput = document.getElementById('field7-ciphertext-input')
+        const field7CiphertextSubmit = document.getElementById('field7-ciphertext-submit')
+        field7CiphertextSubmit.addEventListener('click', () => {
+          cryptoField7.setCiphertext(field7CiphertextInput.value)
+        })
 
-      const ciphertextField7 = document.getElementById('ciphertextField7')
-      const field7 = document.getElementById('field7')
-      const cryptoField7 = await window.browserDataProtection.createProtectedField(field7, {
-        protectionMode: 'recipient',
-        distributionMode: 'external',
-        updateMode: 'immediate',
-        ciphertextChangedCallback (ciphertext) {
-          ciphertextField7.innerText = ciphertext
-        },
-      })
-      // cryptoField7.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b752e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
-      console.log(cryptoField7)
-      const field7CiphertextInput = document.getElementById('field7-ciphertext-input')
-      const field7CiphertextSubmit = document.getElementById('field7-ciphertext-submit')
-      field7CiphertextSubmit.addEventListener('click', () => {
-        cryptoField7.setCiphertext(field7CiphertextInput.value)
-      })
-
-      setTimeout(() => field7.click(), 50)
-    })();
-  </script>
-</body>
-
+        setTimeout(() => field7.click(), 50)
+      })();
+    </script>
+  </body>
 </html>
