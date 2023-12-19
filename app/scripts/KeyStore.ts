@@ -5,7 +5,7 @@ export const keyTypes = [
   // [keyType, keyText, keyTextAdjective (used with the word "key" appended), keyDescription]
   ['symmetric', 'Symmetric', 'symmetric', 'A key that either is used only by a single user or that is additionaly shared with a specific set of other users, depending on the key type.'],
   ['password', 'Password', 'password', 'A password that is used for the decryption of a specific value or set of values. Its encryption key can optionally be saved here so the password does not need to be entered every time. Every password is bound to a specific input field. The password itself is never stored, only the resulting key.'],
-  ['recipient', 'Recipient', 'recipient', 'A key that is shared/received with a specific user. Only the key owner (who knows the so-called private key) can decrypt values encrypted with this key. Other users can only encrypt values for this key.'],
+  ['recipient', 'Recipient', 'recipient', 'A key that is shared with or received from a specific user. Only the key owner (who knows the so-called private key) can decrypt values encrypted with this key. Other users can only encrypt values for this key.'],
 ]
 
 export type KeyId = string
