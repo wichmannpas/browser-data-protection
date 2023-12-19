@@ -182,7 +182,7 @@ import { ProtectedFieldOptions } from "./ProtectedFieldOptions";
 
   const protectedFields: { [key: number]: ProtectedField } = {}
 
-  function createProtectedField(element: Element, options: any) {
+  function createProtectedField(element: Element, options: any): ProtectedField {
     const fieldId = window.crypto.getRandomValues(new Uint32Array(1))[0]
 
     if (element.getAttribute('bdp-fieldId') !== null) {

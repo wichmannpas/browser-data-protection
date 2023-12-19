@@ -37,18 +37,32 @@ export function bufferFromBase64(value: string): ArrayBuffer {
   return bytes.buffer
 }
 
+async function getRawKey(key: CryptoKey): Promise<ArrayBuffer> {
+  if (key.type === 'secret') {
+    return await crypto.subtle.exportKey('raw', key)
+  } else if (key.type === 'public') {
+    return await crypto.subtle.exportKey('spki', key)
+  }
+  throw new Error(`unexpected key type ${key.type} for deriveKeyId`)
+}
+
 /**
  * The SHA-256 hash of a key is used as the key ID.
- * For asymmetric keys, the public key is used to derive the hash, which needs to be provided by the caller as the only parameter.
+ * For asymmetric keys, the public key is used to derive the hash, which needs to be provided by the caller **without private key**.
  */
-export async function deriveKeyId(key: CryptoKey): Promise<string> {
-  let rawKey: ArrayBuffer
-  if (key.type === 'secret') {
-    rawKey = await crypto.subtle.exportKey('raw', key)
-  } else if (key.type === 'public') {
-    rawKey = await crypto.subtle.exportKey('spki', key)
-  } else {
-    throw new Error(`unexpected key type ${key.type} for deriveKeyId`)
+export async function deriveKeyId(key: CryptoKey, secondKey?: CryptoKey): Promise<string> {
+  const rawKey1 = await getRawKey(key)
+  let rawKey = rawKey1
+  if (secondKey !== undefined) {
+    const rawKey2 = await getRawKey(secondKey)
+    const rawKeyConc = new Uint8Array(rawKey1.byteLength + rawKey2.byteLength)
+    for (let i = 0; i < rawKey1.byteLength; i++) {
+      rawKeyConc[i] = rawKey1[i]
+    }
+    for (let i = 0; i < rawKey2.byteLength; i++) {
+      rawKeyConc[rawKey1.byteLength + i] = rawKey2[i]
+    }
+    rawKey = rawKeyConc.buffer
   }
   const hash = await crypto.subtle.digest('SHA-256', rawKey)
   return bufferToHex(hash)

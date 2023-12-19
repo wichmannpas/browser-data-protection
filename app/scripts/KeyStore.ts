@@ -52,7 +52,6 @@ export interface RecipientKey extends StoredKey {
   encryptionKeyPair: {
     privateKey?: CryptoKey
     publicKey: CryptoKey
-    signature: EncodedValueAndSignature
   }
 }
 export function isRecipientKey(key: StoredKey): key is RecipientKey {
@@ -433,7 +432,7 @@ export default class KeyStore {
       ['encrypt', 'decrypt'],
     )
     const keyObj: RecipientKey = {
-      keyId: await deriveKeyId(signingKeyPair.publicKey),
+      keyId: await deriveKeyId(signingKeyPair.publicKey, encryptionKeyPair.publicKey),
       signingKeyPair: {
         privateKey: signingKeyPair.privateKey,
         publicKey: signingKeyPair.publicKey,
@@ -441,7 +440,6 @@ export default class KeyStore {
       encryptionKeyPair: {
         privateKey: encryptionKeyPair.privateKey,
         publicKey: encryptionKeyPair.publicKey,
-        signature: await this.#signECDSA(await deriveKeyId(encryptionKeyPair.publicKey), signingKeyPair.privateKey),
       },
       shortDescription,
       created: new Date(),
@@ -481,13 +479,7 @@ export default class KeyStore {
   }
   async #validateRecipientKeyPair(keyPair: RecipientKey): Promise<boolean> {
     // check that keyId of this key pair is indeed the derived key id from the signing key's public key
-    if (keyPair.keyId !== await deriveKeyId(keyPair.signingKeyPair.publicKey)) {
-      return false
-    }
-
-    // check that key pair's encryption key has a valid signature
-    const [signedKeyId, valid] = await this.#verifyECDSA(keyPair.encryptionKeyPair.signature, keyPair.signingKeyPair.publicKey)
-    if (signedKeyId !== await deriveKeyId(keyPair.encryptionKeyPair.publicKey) || valid !== true) {
+    if (keyPair.keyId !== await deriveKeyId(keyPair.signingKeyPair.publicKey, keyPair.encryptionKeyPair.publicKey)) {
       return false
     }
 
@@ -585,7 +577,7 @@ export default class KeyStore {
     } catch {
       throw new BDPParameterError(`The sender's public key is invalid.`)
     }
-    if (data.senderKeyId !== await deriveKeyId(senderSigningPublicKey)) {
+    if (data.senderKeyId !== await deriveKeyId(senderSigningPublicKey, sender)) {
       throw new BDPParameterError(`The sender's public key does not match the sender key id.`)
     }
     const [signedEphemeralKeyId, valid] = await this.#verifyECDSA(data.signedEphemeralKeyId, senderSigningPublicKey)
