@@ -99,7 +99,7 @@
             ciphertexts while the popup is active and the user modifying a value.
           </p>
           <div id="field1"></div>
-          <code id="ciphertextField1"></code>
+          <textarea id="ciphertextField1" readonly rows="6" class="form-input"></textarea>
         </div>
 
         <div class="demo-field">
@@ -110,13 +110,13 @@
         <div class="demo-field">
           <strong>Field 3: Password key</strong>
           <div id="field3"></div>
-          <code id="ciphertextField3"></code>
+          <textarea id="ciphertextField3" readonly rows="6" class="form-input"></textarea>
         </div>
 
         <div class="demo-field">
           <strong>Field 4: symmetric, external, immediate</strong>
           <div id="field4"></div>
-          <code id="ciphertextField4"></code>
+          <textarea id="ciphertextField4" readonly rows="6" class="form-input"></textarea>
           Exported key (password: "f")
           <textarea id="field4-exported-password-key" readonly rows="6"
             class="form-input">eyJrZXlJZCI6ImZhMWM3M2E4ODY2ZGNmZDljY2ZiYWExMmIwNWNkZmRmIiwiaXYiOiIwMWRrd2tWQ3ZNZ2t2S3ZxIiwiY2lwaGVydGV4dCI6IjBCaEJDMjRnSjlvQmxablRFaEVRNnZTUXBidXV5TWJvcmduNzFKOFhVOGxkTk5QN1lCc0RzeXU0bXlNeWhwRDdFc0I1R1NGdnBEdC9JY3Y5UkRDU1FjWVhzNSs0b0VhU0YyR0owanAyOGRyMlFyQ2hpM29qamc1all2ODQwbHg4WWxoVDRlckVkZUtmd1dxcjJlTzQxOVd3ODRTbDFFMlJ5Vk9aejlPdE5kSS94TFdteENXbktSb3VCNXpXdnJ6UVk1TXJoSFFSWHY2bC9EZmJmVGhUTUZ3a3AydGd1YUo1eG95Zk5vNm1hZHhJbFppWDIvZVZpOVNIbmNobzdwVkhLNGROMy8wcU1LZzBkTGVpQXBVbktpMzY3akg4NGRkaHdpQU9kTDY3YzFsMmVzNTB0by9kRTBYL2JhR3BIZ3VUVURuR2ozeVZORjBydFNWQ3hTa0tUNktBZFdsa0tudGxJbUhwbzA2cHhqdWlkSzVQS21tTm9WRmZPdG9MQjJNa2pMckVHQ3M0YUI1a1R1M3ZpVy9acEJxa2toU3JwYTUvVVVFaTRyTUUrdU4zMzNxd0oxZm5wYU9NNXNaVjY3UTdYSFV3bUdoTkxNUUdhUnNzN3dFPSIsInNhbHQiOiI3bzlsTXVaUG1BRGE1WjBHSUFTZzVwYWVUZlFBSDRVcmhjdDVRajZpIn0=</textarea>
@@ -167,7 +167,7 @@
             <strong>WebSocket state:</strong> <span id="key-agreement-websocket-state">not connected</span>
           </p>
           <div id="field5"></div>
-          <code id="ciphertextField5"></code>
+          <textarea id="ciphertextField5" readonly rows="6" class="form-input"></textarea>
           <code id="field5-public-key-id-display"></code>
           <strong>
             Public key of this browser (for copy-pasting to another browser if you want to use the manual approach):
@@ -195,13 +195,13 @@
         <div class="demo-field">
           <strong>Field 6: recipient, direct-plain, immediate</strong>
           <div id="field6"></div>
-          <code id="ciphertextField6"></code>
+          <textarea id="ciphertextField6" readonly rows="6" class="form-input"></textarea>
         </div>
 
         <div class="demo-field">
           <strong>Field 7: recipient, external, immediate</strong>
           <div id="field7"></div>
-          <code id="ciphertextField7"></code>
+          <textarea id="ciphertextField7" readonly rows="6" class="form-input"></textarea>
           <textarea id="field7-ciphertext-input" placeholder="Provide a ciphertext for this field." rows="6"
             class="form-input"></textarea>
           <button id="field7-ciphertext-submit" class="btn">Provide this ciphertext</button>
@@ -236,7 +236,7 @@
           protectionMode: 'symmetric',
           distributionMode: 'user-only',
           ciphertextChangedCallback (ciphertext) {
-            ciphertextField1.innerText = ciphertext
+            ciphertextField1.value = ciphertext
           },
         })
         console.log(cryptoField1)
@@ -269,7 +269,7 @@
           protectionMode: 'password',
           updateMode: 'on-submit',
           ciphertextChangedCallback (ciphertext) {
-            ciphertextField3.innerText = ciphertext
+            ciphertextField3.value = ciphertext
           },
         })
         // cryptoField3.setCiphertext('{"keyId":"81f06e43e9acdf47b0db0edefd2e903f","iv":"a/jMS4UnWiccKK7o","ciphertext":"ASq3UMIUwE5/pOKlC8T65h7r/xI=","salt":"qrnmFOnTTbmvQ+Tt5xEKTuXwIxUmDE/58HPXhZmf"}')
@@ -282,7 +282,7 @@
           distributionMode: 'external',
           updateMode: 'immediate',
           ciphertextChangedCallback (ciphertext) {
-            ciphertextField4.innerText = ciphertext
+            ciphertextField4.value = ciphertext
           },
         })
         cryptoField4.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b652e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
@@ -330,7 +330,7 @@
                 if (observedCiphertexts.includes(message.ciphertext)) {
                   break
                 }
-                ciphertextField5.innerText = message.ciphertext
+                ciphertextField5.value = message.ciphertext
                 cryptoField5.setCiphertext(message.ciphertext)
                 observedCiphertexts.push(message.ciphertext)
                 break
@@ -344,7 +344,7 @@
           distributionMode: 'key-agreement',
           updateMode: 'immediate',
           ciphertextChangedCallback (ciphertext) {
-            ciphertextField5.innerText = ciphertext
+            ciphertextField5.value = ciphertext
             if (ws !== undefined) {
               ws.send(JSON.stringify({ operation: 'provideNewCiphertext', ciphertext }))
             }
@@ -374,7 +374,7 @@
           updateMode: 'immediate',
           recipientPublicKey: 'eyJrZXlJZCI6IjJjN2I3ZTM4YTdhMTllNjgwYzgzNTY1MTM4NTNmMGQwIiwic2lnbmluZ0tleVBhaXIiOnsicHVibGljS2V5Ijp7ImFsZ29yaXRobSI6eyJuYW1lIjoiRUNEU0EiLCJuYW1lZEN1cnZlIjoiUC01MjEifSwia2V5RGF0YSI6eyJjcnYiOiJQLTUyMSIsImV4dCI6dHJ1ZSwia2V5X29wcyI6WyJ2ZXJpZnkiXSwia3R5IjoiRUMiLCJ4IjoiQUd5RzlydEJXSU5yaUw4MjdaRXpMN2NFRHV0TjM2cW9ZQkU2S1lsVzZHMHVHcTg2b1VBS3lva1Z5LUNheGo2bVY1VFVSRl82TFBxTEk5dEltdmlZdEY2ayIsInkiOiJBQnJqVlhldEp5bFBPRXE5b3lobEJhR1k0M2NFeWh1dHAzaEFYdkExU0dnbWRqQlNVRGY4MTF1aG9ORGRYeTVRcGo3TXJFUFV3cVZONmE5LWRlME9RU042In19fSwiZW5jcnlwdGlvbktleVBhaXIiOnsicHVibGljS2V5Ijp7ImFsZ29yaXRobSI6eyJuYW1lIjoiUlNBLU9BRVAiLCJoYXNoIjp7Im5hbWUiOiJTSEEtMjU2In0sIm1vZHVsdXNMZW5ndGgiOjQwOTYsInB1YmxpY0V4cG9uZW50IjoiQVFBQiJ9LCJrZXlEYXRhIjp7ImFsZyI6IlJTQS1PQUVQLTI1NiIsImUiOiJBUUFCIiwiZXh0Ijp0cnVlLCJrZXlfb3BzIjpbImVuY3J5cHQiXSwia3R5IjoiUlNBIiwibiI6ImtTbVRvcGx6VUdfN2V5YzVrU3Vlb1RyeFlrQUFDMHF5bkdubDZhUTFQNVJHd3dRRVR6MVlVZnlZSkNzM09PaGpnRDVoNzZzTjlPXzZhcnhuLTlzaWdpSnFqYzlCNzA2TDFRUzEyc3ZBU2NULV9rb056R2V4bXEwYTc0Skx5WGdoWndUMTE2ZFBKMlRNSEdfSW5pamtGWGN4ZVFIWmJLbTQyNFpxRHVNejZLcTFub1BMRGh6NFQ2ODc4czRRUFhyTldCc0Y5UHFBTWoxM01BdkEzcnU4bFJaaWlZTk9MVkpzYUxwa0F5T21QTzl1T0d3MUFwb0ttQWpEVTNyRVBrcFNhSXdBRDdRV0hhc3NXYzJFcVNldS0xR3JaaVNYdlRMNldoZG90aXNoamtVQ0dqT25lZUFaWkk2YmJyc2Z4bjRyeGluT0QxSFpvN3dmYmUtNWRKN0RpZl85WVNqdU1tVTN2WnhMbVFMT002eVpJemZhWWxDYjN6MmY4QlVaSnU0cjVvS2xqOGtQTm5FTzVIb2pFVWRhNm1qay1JZmtOdF82Q3YzeVJSVXJRTHdRX2J2aHN1TmVvd2tud1ItMXVzbEVUbVpGNzY3eC14MkRhRUZmbjBadTZ2cEplU2VfdWU4OWtIaGRLNEtzSFhKcXdJZmVVZmZsTFRXRFNLbEo0VFpoYkZtVDJLblFGWnhXaGFnUHE1VkNZX0ZYb0pkTklRNnZ6WGdJWndpQklwUjNmTThKUHRkb2VhZWtMSTJraWtyaEZHSjE1cE9WT05vczhZMzVYdmlUa3ZqU3lmajVYaGNySER2R3ZOSG9Obk5FM1RrNHlhREl1Vy1TTmNKTXpGM0h4NVhMT1R3TkdkUGJjWHEzRFBaQXpuNEJvRGU5MFpNTllCZkJjZm1QbWFjIn19LCJzaWduYXR1cmUiOiJ7XCJ2YWx1ZVwiOlwiMGFlMjE4ZGExN2E1MmRmZDc3NWE0N2QwM2ViY2RmYmRcIixcInNpZ25hdHVyZVwiOlwiQVB2OVBxQWpYWWdOaEhLT3FrNWl6akFoc3l5ak1JZ0F2R21vOUhGUi9SMStiM25OTUM1ZDVSUFY0REFMYndxcTFaWkxiN3RJc0FPM1NJOWpCSG9UOUZDckFYNVBmd0JvNWI3emowREEwN0drVEVjZ1FURFJTUHRyWkZpSW9jS1FSQ2FqU1BuTjdocFh4K1VISWNkZlFYNXdXdEx6WE5BTHphMkllMmRxQXR6K29GWGtcIn0ifSwic2hvcnREZXNjcmlwdGlvbiI6IlRlc3QgMiIsImNyZWF0ZWQiOjE2OTgzOTk1ODkzNDQsImxhc3RVc2VkIjpudWxsLCJhbGxvd2VkT3JpZ2lucyI6WyIqIl0sInByZXZpb3VzbHlVc2VkT25PcmlnaW5zIjpbXX0=',
           ciphertextChangedCallback (ciphertext) {
-            ciphertextField6.innerText = ciphertext
+            ciphertextField6.value = ciphertext
           },
         })
         // cryptoField6.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b652e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
@@ -387,7 +387,7 @@
           distributionMode: 'external',
           updateMode: 'immediate',
           ciphertextChangedCallback (ciphertext) {
-            ciphertextField7.innerText = ciphertext
+            ciphertextField7.value = ciphertext
           },
         })
         // cryptoField7.setCiphertext('{"keyId":"b534d57cc90cb15b83c90b752e154ed4","iv":"bj9CrLeQVQGSQrSx","ciphertext":"/xXIBA5B5Ujafk4XAij07fsrC1LPiA=="}')
